@@ -1,0 +1,54 @@
+[project]
+name = "expanto"
+version = "0.1.0a1"
+description = "Experimenter Analytics Tools"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mypy>=1.14.1",
+    "pydantic>=2.10.6",
+    "pytest>=8.3.4",
+    "ruff>=0.9.3",
+    "scipy>=1.15.1",
+    "snowflake-connector-python>=3.13.2",
+    "statsmodels>=0.14.4",
+    "streamlit>=1.48.0",
+    "sqlalchemy[asyncio]>=2.0.38",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+    "loguru>=0.7.3",
+    "pydantic-ai-slim[duckduckgo,tavily]>=0.7.0",
+    "chromadb>=1.0.5",
+    "pydantic-ai>=0.7.0",
+    "plotly>=6.0.1",
+    "google-cloud>=0.34.0",
+    "google-cloud-bigquery[bqstorage,pandas]>=3.31.0",
+    "db-dtypes>=1.4.2",
+    "pyarrow<19",
+    "fastapi[standard]>=0.115.9",
+    "requests>=2.32.3",
+    "aiosqlite>=0.21.0",
+    "tabulate>=0.9.0",
+    "pydantic-settings>=2.4.0",
+    "jinja2>=3.1.4",
+    "pytest-asyncio>=1.0.0",
+    "logfire[fastapi,httpx,pydantic,pydantic-ai,requests,sqlalchemy]>=4.3.3",
+]
+
+[tool.ruff]
+line-length = 108
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle, Pyflakes, pyupgrade, flake8-bugbear, flake8-simplify, isort
+    "E", "F", "UP", "B", "SIM", "I"
+]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not integration and not slow'"
+markers = [
+    "slow: mark test as slow",
+    "integration: mark test as integration test"
+]
+[tool.mypy]
+plugins = ["pydantic.mypy"]

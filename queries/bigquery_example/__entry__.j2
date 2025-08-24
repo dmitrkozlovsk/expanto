@@ -1,0 +1,74 @@
+with
+    events AS (
+        {% include "base_new/events.sql" %}
+    ),
+    testids AS (
+        {% include "base_new/testids.sql" %}
+    ),
+    events_x_testids AS (
+        {% include "base_new/events_x_testids.sql" %}
+    ),
+    user_aggregation AS (
+        {% include "base_new/user_aggregation.sql" %}
+    )
+    aggregated AS (
+        SELECT
+            group_name,
+            ARRAY<STRUCT<
+                metric_name STRING,
+                metric_type STRING,
+                metric_display_name STRING,
+                metric_value FLOAT64,
+                numerator_avg FLOAT64,
+                denominator_avg FLOAT64,
+                numerator_var FLOAT64,
+                denominator_var FLOAT64,
+                covariance FLOAT64
+            >>[
+            {% for experiment_metric in experiment_metrics_list %}
+            STRUCT(
+                '{{ experiment_metric.alias }}',
+                '{{ experiment_metric.type }}',
+                '{{ experiment_metric.display_name }}',
+                {{ experiment_metric.sql }},
+                {% if experiment_metric.type == 'ratio' %}
+                    AVG({{ experiment_metric.formula.numerator.alias }}),
+                    AVG({{ experiment_metric.formula.denominator.alias }}),
+                    VAR_SAMP({{ experiment_metric.formula.numerator.alias }}),
+                    VAR_SAMP({{ experiment_metric.formula.denominator.alias }}),
+                    COVAR_SAMP(
+                        {{ experiment_metric.formula.numerator.alias }},
+                        {{ experiment_metric.formula.denominator.alias }}
+                    )
+                {% elif experiment_metric.type == 'avg' %}
+                    NULL,
+                    NULL,
+                    VAR_SAMP({{ experiment_metric.formula.numerator.alias }}),
+                    NULL,
+                    NULL
+                {% else %}
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL
+                {% endif %}
+            ){% if not loop.last %},{% endif %}
+            {% endfor %}
+        ] AS metrics
+    FROM user_aggregation
+    GROUP BY group_name
+    )
+
+SELECT
+    group_name,
+    m.metric_name,
+    m.metric_type,
+    m.metric_display_name,
+    m.metric_value,
+    m.numerator_avg,
+    m.denominator_avg,
+    m.numerator_var,
+    m.denominator_var,
+    m.covariance
+FROM aggregated, UNNEST(metrics) AS m

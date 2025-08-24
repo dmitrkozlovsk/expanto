@@ -1,0 +1,20 @@
+{% if custom_testids_table %}
+SELECT
+    *
+FROM {{ custom_testids_table }}
+{% else %}
+SELECT
+    {{observation.split_id}},
+    record_timestamp as first_split_timestamp,
+    {% if purpose == 'planning' %} '{{ purpose }}' as group_name
+        {%- else %} group_name {% endif %},
+    country,
+    city,
+    os,
+    version,
+    galaxy --default:milky way
+FROM testids
+WHERE 1=1
+  AND experiment_name = '{{observation.db_experiment_name}}'
+QUALIFY ROW_NUMBER() OVER (PARTITION BY {{observation.split_id}} ORDER BY record_timestamp) = 1
+{% endif %}
