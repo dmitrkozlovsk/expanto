@@ -1,6 +1,6 @@
 # Expanto
 
-**Experiment Analytics Tools** — A/B testing platform for analysts and data scientists who need full control over their experimentation workflow.
+**Experimenter Analytics Tools** — A/B testing platform for analysts and data scientists who need full control over their experimentation workflow.
 
 ## Design Principles
 
