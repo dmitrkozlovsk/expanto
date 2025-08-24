@@ -1,0 +1,113 @@
+metric_group_name: 'Expanto Demo Metrics'
+user_aggregations: # user-level metrics with alias (for use in experiment-level metrics)
+  # Demo metrics for Expanto implementation experiment
+  bugs_reported_cnt: &bugs_reported_cnt
+    alias: bugs_reported_cnt
+    sql: COUNT(CASE event_name WHEN 'bug_reported' THEN event_name ELSE null END)
+  debug_time_hours: &debug_time_hours
+    alias: debug_time_hours
+    sql: SUM(CASE event_name WHEN 'debug_session' THEN event_value ELSE 0 END)
+  metrics_calculation_time_hours: &metrics_calculation_time_hours
+    alias: metrics_calculation_time_hours
+    sql: SUM(CASE event_name WHEN 'metrics_calculated' THEN event_value ELSE 0 END)
+  analysis_time_hours: &analysis_time_hours
+    alias: analysis_time_hours
+    sql: SUM(CASE event_name WHEN 'analysis_completed' THEN event_value ELSE 0 END)
+  experiments_created_cnt: &experiments_created_cnt
+    alias: experiments_created_cnt
+    sql: COUNT(CASE event_name WHEN 'experiment_created' THEN event_name ELSE null END)
+  satisfaction_score: &satisfaction_score
+    alias: satisfaction_score
+    sql: AVG(CASE event_name WHEN 'satisfaction_survey' THEN event_value ELSE null END)
+  
+  # Additional metrics for ratio and proportion demo
+  successful_experiments_cnt: &successful_experiments_cnt
+    alias: successful_experiments_cnt
+    sql: COUNT(CASE event_name WHEN 'experiment_success' THEN event_name ELSE null END)
+  total_experiments_cnt: &total_experiments_cnt
+    alias: total_experiments_cnt
+    sql: COUNT(CASE event_name WHEN 'experiment_completed' THEN event_name ELSE null END)
+  high_satisfaction_analysts_flg: &high_satisfaction_analysts_flg
+    alias: high_satisfaction_analysts_flg
+    sql: MAX(CASE WHEN event_name = 'satisfaction_survey' AND event_value >= 8 THEN 1 ELSE 0 END)
+
+metrics:
+  - alias: avg_bugs_per_analyst
+    type: avg
+    display_name: "Average Bugs Reported per Analyst"
+    description: "Average number of bugs reported by analysts during experiment lifecycle"
+    formula:
+      numerator: *bugs_reported_cnt
+      denominator: null
+    owner: expanto_team
+    tags: ["quality", "productivity", "demo"]
+
+  - alias: avg_debug_time_hours
+    type: avg
+    display_name: "Average Debug Time (Hours)"
+    description: "Average hours spent debugging issues during experimentation workflow"
+    formula:
+      numerator: *debug_time_hours
+      denominator: null
+    owner: expanto_team
+    tags: ["productivity", "time", "demo"]
+
+  - alias: avg_metrics_calculation_time
+    type: avg
+    display_name: "Average Metrics Calculation Time (Hours)"
+    description: "Average time spent on calculating and preparing metrics for analysis"
+    formula:
+      numerator: *metrics_calculation_time_hours
+      denominator: null
+    owner: expanto_team
+    tags: ["productivity", "time", "demo"]
+
+  - alias: avg_analysis_time_hours
+    type: avg
+    display_name: "Average Analysis Time (Hours)"
+    description: "Average time spent on analysis and result presentation"
+    formula:
+      numerator: *analysis_time_hours
+      denominator: null
+    owner: expanto_team
+    tags: ["productivity", "time", "demo"]
+
+  - alias: avg_experiments_created
+    type: avg
+    display_name: "Average Experiments Created per Analyst"
+    description: "Average number of experiments created per analyst during the period"
+    formula:
+      numerator: *experiments_created_cnt
+      denominator: null
+    owner: expanto_team
+    tags: ["productivity", "output", "demo"]
+
+  - alias: analyst_satisfaction_score
+    type: avg
+    display_name: "Analyst Satisfaction Score"
+    description: "Average satisfaction score from analyst feedback surveys (1-10 scale)"
+    formula:
+      numerator: *satisfaction_score
+      denominator: null
+    owner: expanto_team
+    tags: ["satisfaction", "quality", "demo"]
+
+  - alias: experiment_success_rate
+    type: ratio
+    display_name: "Experiment Success Rate"
+    description: "Ratio of successful experiments to total completed experiments"
+    formula:
+      numerator: *successful_experiments_cnt
+      denominator: *total_experiments_cnt
+    owner: expanto_team
+    tags: ["success", "quality", "demo"]
+
+  - alias: high_satisfaction_analyst_proportion
+    type: proportion
+    display_name: "High Satisfaction Analysts (%)"
+    description: "Proportion of analysts with satisfaction score 8+ out of 10"
+    formula:
+      numerator: *high_satisfaction_analysts_flg
+      denominator: null
+    owner: expanto_team
+    tags: ["satisfaction", "proportion", "demo"] 

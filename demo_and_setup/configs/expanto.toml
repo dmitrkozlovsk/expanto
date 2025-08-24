@@ -1,0 +1,31 @@
+#expanto configs
+[metrics]
+dir = "./metrics" #define name in the folder where metrics will be stored
+
+[queries]
+dir = './queries' #define name in the folder where sql templates will be stored
+
+[queries.scenarios]
+snowflake_example = 'snowflake_example/__entry__.j2'
+bigquery_example = 'bigquery_example/base.sql'
+
+[precompute_db]
+name = "snowflake" # snowflake | bigquery | etc. (database where all experiment data is stored)
+
+# assistant Configuration
+[assistant]
+provider = 'together' #only together works for now
+
+[assistant.models] #recomend for together.ai  experiment_creator_model, observation_creator_model, results_analyzer, univeral
+fast = "deepseek-ai/DeepSeek-V3" #should be fast and support struct output
+tool_thinker = "Qwen/Qwen3-235B-A22B-Thinking-2507" #should support struct output
+agentic = "moonshotai/Kimi-K2-Instruct" #should support struct output and func calling
+
+[assistant.service]
+url = "http://localhost:8000"
+timeout_seconds = 600
+enable_streaming = false
+auto_scroll = true
+
+[logfire]
+send_to_logfire = false

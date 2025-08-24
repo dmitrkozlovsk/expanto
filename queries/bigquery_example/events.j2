@@ -1,0 +1,39 @@
+WITH
+    app_events_cte AS (
+        SELECT
+            user_id,
+            device_id, --your id
+            event_name,
+            event_value, --if needed
+            event_timestamp
+        FROM app_events
+        WHERE event_timestamp BETWEEN '{{observation.exposure_start_datetime}}'
+                  AND '{{observation.calc_end_datetime}}'
+    ),
+    backend_events_cte AS (
+        SELECT
+            user_id,
+            device_id, --your id
+            event_name,
+            event_value, --if needed
+            event_timestamp
+        FROM backend_events
+        WHERE event_timestamp BETWEEN '{{observation.exposure_start_datetime}}'
+                  AND '{{observation.calc_end_datetime}}'
+    ),
+    transaction_events_cte AS (
+        SELECT
+            user_id,
+            device_id, --your id
+            event_name,
+            event_value, --if needed
+            event_timestamp
+        FROM transaction_events
+        WHERE event_timestamp BETWEEN '{{observation.exposure_start_datetime}}'
+                  AND '{{observation.calc_end_datetime}}'
+    )
+SELECT * FROM app_events_cte
+UNION ALL
+SELECT * FROM backend_events_cte
+UNION ALL
+SELECT * FROM transaction_events_cte
