@@ -17,6 +17,7 @@
 - **Web interface** — Streamlit-based UI for all operations
 
 ## Demo
+![demo](https://github.com/user-attachments/assets/8639cc72-62c1-4eb0-87e2-27c9b2eeb189)
 
 ## Quick Start
 
