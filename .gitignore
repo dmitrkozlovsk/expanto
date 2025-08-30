@@ -18,3 +18,4 @@ checks.sh
 alembic*
 .log
 .parquet
+.mypy_cache/
