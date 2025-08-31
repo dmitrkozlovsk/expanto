@@ -8,7 +8,7 @@ dependencies = [
     # Core
     "pydantic>=2.10.6",
     "pydantic-settings>=2.4.0",
-    "streamlit>=1.49.0",
+    "streamlit==1.49.1",
     "sqlalchemy[asyncio]>=2.0.38",
     "aiosqlite>=0.21.0",
     "jinja2>=3.1.4",
