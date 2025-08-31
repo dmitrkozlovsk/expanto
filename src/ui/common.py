@@ -55,9 +55,9 @@ class URLParams:
         for field in fields(cls):
             field_name = field.name
             try:
-                if field == "mode":
+                if field_name == "mode":
                     params[field_name] = PageMode(st.query_params[field_name])
-                elif field in ["submode"]:
+                elif field_name in ["submode"]:
                     params[field_name] = st.query_params[field_name]
                 else:
                     params[field_name] = int(st.query_params[field_name])
