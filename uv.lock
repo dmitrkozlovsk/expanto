@@ -663,7 +663,7 @@ requires-dist = [
     { name = "snowflake-connector-python", specifier = ">=3.13.2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.38" },
     { name = "statsmodels", specifier = ">=0.14.4" },
-    { name = "streamlit", specifier = ">=1.49.0" },
+    { name = "streamlit", specifier = "==1.49.1" },
     { name = "tabulate", specifier = ">=0.9.0" },
 ]
 

@@ -26,16 +26,12 @@ class AppLayout:
                 # Your page content goes here
                 st.write("Main page content")
         """
-        # Check if chat is enabled
         chat_enabled = st.session_state.get("chat_enabled", True)
 
-        if chat_enabled:
-            main_col, chat_col = st.columns([64, 41], gap="small")
-
-            with main_col:
-                yield
-
-            with chat_col:
-                Chat.render()
-        else:
+        column_weights = [64, 41] if chat_enabled else [999999, 1]
+        main_col, chat_col = st.columns(column_weights, gap="small")
+        with main_col:
             yield
+
+        with chat_col:
+            Chat.render() if chat_enabled else st.write("&nbsp;")

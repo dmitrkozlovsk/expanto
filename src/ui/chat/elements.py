@@ -53,7 +53,7 @@ def chat_scroll() -> None:
             }
         </script>
         """,
-        height=0,
+        height=1,
     )
 
 
