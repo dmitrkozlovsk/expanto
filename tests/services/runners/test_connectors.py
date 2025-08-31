@@ -11,8 +11,6 @@ from src.services.runners.connectors import (
 )
 from src.settings import (
     BigQueryCredentials,
-    InternalDBConfig,
-    Secrets,
     SnowflakeCredentials,
 )
 
@@ -164,38 +162,20 @@ def test_run_query_error_snowflake(creds_bigquery_service_account):
         connector.run_query("dummy")
 
 
-def test_resolve_snowflake(creds_snowflake, fake_load_expanto_cfg):
+def test_resolve_snowflake(creds_snowflake, fake_load_expanto_cfg, fake_load_secrets_cfg):
     """Test resolver returns Snowflake connector for snowflake config."""
     config = fake_load_expanto_cfg
     config.precompute_db.name = "snowflake"
-    secrets = Secrets(
-        snowflake=creds_snowflake,
-        internal_db=InternalDBConfig(
-            **{
-                "engine_str": "sqlite:///:memory:",
-                "async_engine_str": "sqlite+aiosqlite:///:memory:",
-                "connect_args": {"check_same_thread": False},
-            }
-        ),
-    )
+    secrets = fake_load_secrets_cfg
     connector = ConnectorResolver.resolve(precompute_db_name=config.precompute_db.name, secrets=secrets)
     assert isinstance(connector, SnowflakeConnector)
 
 
-def test_resolve_bigquery(creds_bigquery_service_account, fake_load_expanto_cfg):
+def test_resolve_bigquery(creds_bigquery_service_account, fake_load_expanto_cfg, fake_load_secrets_cfg):
     """Test resolver returns BigQuery connector for bigquery config."""
     config = fake_load_expanto_cfg
     config.precompute_db.name = "bigquery"
-    secrets = Secrets(
-        bigquery=creds_bigquery_service_account,
-        internal_db=InternalDBConfig(
-            **{
-                "engine_str": "sqlite:///:memory:",
-                "async_engine_str": "sqlite+aiosqlite:///:memory:",
-                "connect_args": {"check_same_thread": False},
-            }
-        ),
-    )
+    secrets = fake_load_secrets_cfg
     connector = ConnectorResolver.resolve(precompute_db_name=config.precompute_db.name, secrets=secrets)
 
     assert isinstance(connector, BigQueryConnector)

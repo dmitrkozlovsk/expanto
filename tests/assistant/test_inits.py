@@ -39,9 +39,7 @@ def test_init_assistant_service_missing_agent_keys(fake_load_expanto_cfg):
     """Test initialization fails when assistant keys are missing."""
     with pytest.raises(ValueError, match="Api keys.*not set"):
         secrets = MagicMock(api_keys=None)
-        init_assistant_service(
-            secrets=secrets, config=fake_load_expanto_cfg
-        )
+        init_assistant_service(secrets=secrets, config=fake_load_expanto_cfg)
 
 
 def test_init_assistant_service_missing_together_key(fake_load_expanto_cfg):

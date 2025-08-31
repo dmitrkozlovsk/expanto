@@ -18,6 +18,7 @@ def _clear_streamlit_caches():
 @pytest.fixture
 def results_page_app_test():
     from src.ui.state import AppContextManager
+
     """Create AppTest instance for results page testing."""
     at = AppTest.from_file("src/ui/results/page.py")
     AppContextManager.get_or_create_state()

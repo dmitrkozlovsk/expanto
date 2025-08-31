@@ -13,17 +13,30 @@ def app_script():
     Chat.render()
 
 
-@pytest.fixture
-def app():
+def make_success_response():
+    """Create mock successful ChatResponse for testing."""
+    return ChatResponse(
+        chat_msg="Hello",
+        supplement=None,
+        success=True,
+        usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
+        error_msg=None,
+    )
+
+
+@pytest.fixture(scope="function")
+def app(patch_configs):
     """Fixture providing AppTest instance for Chat component testing."""
     at = AppTest.from_function(app_script)
     at.run()
     return at
 
 
-def test_active_user_input_reset(app):
+@patch("src.ui.chat.chat.ChatController.process_user_input", return_value=make_success_response())
+def test_active_user_input_reset(mock_process, app):
     """Test that active user input is reset after message submission."""
     app.chat_input[0].set_value("ping").run()
+    print(app)
     assert app.session_state["chat_state"].active_user_input is None
 
 
@@ -64,17 +77,6 @@ def test_user_input_error_response(app):
     assert app.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
     assert "Error" in app.session_state["chat_state"].msg_history[-1].content
     assert app.session_state["chat_state"].active_user_input is None
-
-
-def make_success_response():
-    """Create mock successful ChatResponse for testing."""
-    return ChatResponse(
-        chat_msg="Hello",
-        supplement=None,
-        success=True,
-        usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
-        error_msg=None,
-    )
 
 
 @patch("src.ui.chat.chat.ChatController.process_user_input", return_value=make_success_response())
