@@ -1,0 +1,20 @@
+metric_group_name: 'Order Metrics'
+user_aggregations:
+  product_purchase_cnt: &product_purchase_cnt
+    alias: product_purchase_cnt
+    sql: COUNT(CASE event_name WHEN 'product_purchased' THEN event_name ELSE null END)
+
+  product_revenue_sum: &product_revenue_sum
+    alias: product_revenue_sum
+    sql: SUM(CASE event_name WHEN 'product_purchased' THEN event_value ELSE 0 END)
+
+metrics:
+  - alias: avg_order_value
+    type: ratio
+    display_name: "Average Order Value"
+    description: "Sum of product purchase revenue divided by count"
+    formula:
+      numerator: *product_revenue_sum
+      denominator: *product_purchase_cnt
+    owner: me
+    tags: ["orders", "sales"]

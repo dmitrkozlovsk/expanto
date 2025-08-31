@@ -114,10 +114,10 @@ async def test_app_context_injected_into_prompt(injector_agent: Agent):
 
     # Verify the agent ran successfully and returned expected output
     assert result.output == "pong"
-    
+
     # Check that messages were captured
     assert len(messages) > 0
-    
+
     # Check that UserPromptPart contains the original message
     for msg in messages:
         if not isinstance(msg, ModelRequest):
@@ -190,7 +190,7 @@ async def test_agent_orchestrator_low_confidence_returns_follow_up_questions():
             # Create mock assistant_models with required attributes
             self.assistant_models = SimpleNamespace(
                 fast="test-router",
-                agentic="test-agentic", 
+                agentic="test-agentic",
                 tool_thinker="test-tool-thinker",
             )
 

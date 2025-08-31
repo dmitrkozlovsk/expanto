@@ -1,0 +1,47 @@
+SELECT
+{{ observation.split_id }} as split_id
+{% if purpose == 'planning' %} ,'planning' as purpose
+{% else %},'result' as purpose {% endif %}
+{% for user_formula in user_formula_list %}
+    , {{ user_formula.sql }} as {{ user_formula.alias }}{% endfor %}
+FROM {% if observation.segment %}{{ observation.segment }}
+{% else %} {{ observation.db_experiment_name }}
+{% endif %}
+WHERE 1 = 1
+AND exposure_timestamp BETWEEN '{{ observation.exposure_start_datetime }}' AND '{{ observation.exposure_end_datetime }}'
+AND event_timestamp BETWEEN '{{ observation.calc_start_datetime }}' AND '{{ observation.calc_end_datetime }}'
+{% if observation.filters %}
+    {% for filter in observation.filters %}
+        AND ({{ filter }}){% if not loop.last %} {% endif %}
+    {% endfor %}{% endif %}
+{% if observation.audience_tables %}
+    AND EXISTS (
+    SELECT 1 FROM {% for table in observation.audience_tables %}
+    {{ table }}{% if not loop.last %} UNION ALL {% endif %}
+{% endfor %}
+    ){% endif %}
+GROUP BY 1
+{% for metric in experiment_metrics_list %}
+    SELECT
+    GROUP_NAME as group_name
+    , '{{ metric.alias }}' as metric_name
+    , '{{ metric.type }}' as metric_type
+    , '{{ metric.display_name }}' as metric_display_name
+    , COUNT(distinct fake_template.{{ observation.split_id }}) as observations_cnt
+    , {{ metric.sql }} as metric_value
+    , AVG({{ metric.formula.numerator.alias }}) as numerator_avg
+    , VAR_SAMP({{ metric.formula.numerator.alias }}) as numerator_var
+    {% if metric.formula.denominator -%}
+        , AVG({{ metric.formula.denominator.alias }}) as denominator_avg
+        , VAR_SAMP({{ metric.formula.denominator.alias }}) as denominator_var
+        , COVAR_SAMP({{ metric.formula.denominator.alias }}, {{ metric.formula.numerator.alias }}) as covariance
+    {% else -%}
+        , CAST(null as float) as denominator_avg
+        , CAST(null as float) as denominator_var
+        , CAST(null as float) as covariance
+    {% endif -%}
+    FROM fake_template
+    GROUP BY group_name
+    {% if not loop.last %}
+        UNION ALL{% endif %}
+{% endfor %}

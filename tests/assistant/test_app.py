@@ -39,7 +39,7 @@ def user_payload() -> dict[str, Any]:
 @patch("assistant.app.init_assistant_service")
 @patch("assistant.app.init_engine")
 @patch("assistant.app.init_vdb")
-def test_invoke_success(mock_vdb, mock_engine, mock_service, user_payload, dummy_usage):
+def test_invoke_success(mock_vdb, mock_engine, mock_service, user_payload, dummy_usage, patch_configs):
     """/invoke returns AgentResponse and disposes engine on shutdown."""
 
     fake_response = AssistantResponse(output="hi!", usage=dummy_usage)
@@ -72,7 +72,7 @@ def test_invoke_success(mock_vdb, mock_engine, mock_service, user_payload, dummy
 @patch("assistant.app.init_assistant_service", lambda *a, **kw: AsyncMock())
 @patch("assistant.app.init_engine", lambda *a, **kw: AsyncMock())
 @patch("assistant.app.init_vdb", lambda *a, **kw: MagicMock())
-def test_invoke_validation_error(user_payload):
+def test_invoke_validation_error(user_payload, patch_configs):
     """Test validation error when chat_uid is missing."""
     payload = user_payload.copy()
     payload.pop("chat_uid")
@@ -88,7 +88,7 @@ def test_invoke_validation_error(user_payload):
 @patch("assistant.app.init_assistant_service")
 @patch("assistant.app.init_engine", lambda *a, **kw: AsyncMock())
 @patch("assistant.app.init_vdb", lambda *a, **kw: MagicMock())
-def test_invoke_service_error(mock_service, user_payload):
+def test_invoke_service_error(mock_service, user_payload, patch_configs):
     """Test error handling when assistant service raises exception."""
     err = RuntimeError("model crashed")
     mock_service_instance = AsyncMock()

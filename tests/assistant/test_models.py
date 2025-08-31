@@ -64,7 +64,7 @@ def test_factory_methods_return_correct_model(
     call_args = model_cls.call_args
     assert call_args.kwargs["model_name"] == expected_model_name
     assert call_args.kwargs["provider"] is provider_cls.return_value
-    
+
     # For router model, verify settings parameter is passed
     if method_name == "create_router_model":
         assert "settings" in call_args.kwargs

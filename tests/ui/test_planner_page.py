@@ -17,6 +17,7 @@ def _clear_streamlit_caches():
 @pytest.fixture
 def planner_page_app_test():
     from src.ui.state import AppContextManager
+
     """Create AppTest instance for planner page testing."""
     at = AppTest.from_file("src/ui/planner/page.py")
     AppContextManager.get_or_create_state()
@@ -133,4 +134,5 @@ def test_planner_page_with_precomputes(planner_page_app_test, patch_configs, tab
         if chart_key:
             at.session_state["effect_size_chart"] = mock_selection
         at.run()
-        assert "### Selected Design" in at.markdown[-1].value
+        print(at)
+        assert "### Selected Design" in at.markdown[-2].value

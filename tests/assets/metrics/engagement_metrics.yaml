@@ -1,0 +1,62 @@
+metric_group_name: 'User Behavior and Engagement Metrics'
+user_aggregations:
+  product_view_cnt: &product_view_cnt
+    alias: product_view_cnt
+    sql: COUNT(CASE event_name WHEN 'product_viewed' THEN event_name ELSE null END)
+
+  session_duration: &session_duration
+    alias: session_duration
+    sql: AVG(session_length)
+
+  product_click_flg: &product_click_flg
+    alias: product_click_flg
+    sql: MAX(CASE event_name WHEN 'product_clicked' THEN 1 ELSE 0 END)
+
+  product_purchase_flg: &product_purchase_flg
+    alias: product_purchase_flg
+    sql: MAX(CASE event_name WHEN 'product_purchased' THEN 1 ELSE 0 END)
+
+  product_view_flg: &product_view_flg
+    alias: product_view_flg
+    sql: MAX(CASE event_name WHEN 'product_viewed' THEN 1 ELSE 0 END)
+
+metrics:
+  - alias: click_through_rate
+    type: ratio
+    display_name: "CTR"
+    description: "Product clicks vs product views"
+    formula:
+      numerator: *product_click_flg
+      denominator: *product_view_cnt
+    owner: me
+    tags: ["engagement", "ui"]
+
+  - alias: conversion_rate
+    type: avg
+    display_name: "Conversion Rate"
+    description: "Product purchases vs product views"
+    formula:
+      numerator: *product_purchase_flg
+      denominator: null
+    owner: me
+    tags: ["conversion", "sales"]
+
+  - alias: avg_session_duration
+    type: avg
+    display_name: "Avg Session Duration"
+    description: "Average session length per user"
+    formula:
+      numerator: *session_duration
+      denominator: null
+    owner: me
+    tags: ["behavior", "time"]
+
+  - alias: users_who_click_product_ratio
+    type: proportion
+    display_name: "Users with Orders"
+    description: "some description"
+    formula:
+      numerator: *product_click_flg
+      denominator: null
+    owner: me
+    tags: null
