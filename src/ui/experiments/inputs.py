@@ -66,9 +66,9 @@ class ExperimentsFilter:
         with col2, st.container():
             container_columns = st.columns(2)
             with container_columns[0]:
-                created_at_start = st.date_input("Created from", datetime.today() - timedelta(days=180))
+                created_at_start = st.date_input("Created from", dt_utils.utc_today() - timedelta(days=180))
             with container_columns[1]:
-                created_at_end = st.date_input("Created to", datetime.today() + timedelta(days=2))
+                created_at_end = st.date_input("Created to", dt_utils.utc_today() + timedelta(days=2))
         with col3:
             status_list_filter: list[str] = st.multiselect(
                 "Status",

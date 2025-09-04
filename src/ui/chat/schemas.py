@@ -100,6 +100,7 @@ class ChatState:
     usage: TokenUsage | None = None
     chat_uid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
+
 @dataclass
 class AppContext:
     """Data class for application context information."""

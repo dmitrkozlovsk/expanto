@@ -62,6 +62,7 @@ class ExperimentStatus(ListableEnum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+
 class ComputationLevel(ListableEnum):
     """Levels at which computations can be performed."""
 

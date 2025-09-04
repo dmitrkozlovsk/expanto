@@ -1,209 +1,199 @@
-"""Module for handling query rendering and calculation execution.
+"""Manages the lifecycle of metric calculation jobs.
 
-This module provides functionality for rendering SQL queries from templates and
-executing calculation jobs for metrics computation. It includes classes for query
-rendering and job execution management.
+This module provides a set of classes to handle the entire process of running
+metric calculations, from creating a job to storing its results. It includes:
+- Executing queries against a database.
+- Managing job status and storing results in a persistent storage.
+- Orchestrating the entire calculation workflow.
 """
 
 from __future__ import annotations
 
-from threading import Thread
 from typing import TYPE_CHECKING
 
-from jinja2 import Environment, FileSystemLoader
 from pydantic import ValidationError
 
 from src.domain.enums import CalculationPurpose, JobStatus
-from src.domain.models import CalculationJob, Observation
 from src.domain.results import JobResult, MetricResult
 from src.logger_setup import logger
 from src.services.entities.handlers import JobHandler, PrecomputeHandler
-from src.services.metric_register import Metrics
-from src.services.runners.connectors import PrecomputeConnector
-from src.settings import QueryTemplatesConfig
 
 if TYPE_CHECKING:
     from sqlalchemy import Engine
 
+    from src.domain.models import Observation
     from src.services.entities.dtos import ObservationDTO
+    from src.services.runners.connectors import PrecomputeConnector
+    from src.services.runners.renderer import QueryRenderer
 
 
-class QueryRenderer:
-    """Handles the rendering of SQL queries from templates.
+def _ok(job_id: int, metrics: list[MetricResult]) -> JobResult:
+    return JobResult.success_result(job_id=int(job_id), metric_results=metrics)
 
-    This class is responsible for loading and rendering SQL query templates
-    using Jinja2 templating engine, incorporating metrics and observation data.
+
+def _err(job_id: int | None, msg: str) -> JobResult:
+    return JobResult.error_result(job_id=int(job_id) if job_id else None, error_message=msg)
+
+
+def _trunc(s: str, n: int = 2000) -> str:
+    return s if len(s) <= n else s[:n] + " …[truncated]"
+
+
+class CalculationExecutor:
+    """Executes a SQL query and wraps the results in a JobResult.
+
+    This class is responsible for the execution phase of a calculation job. It
+    connects to the data source, runs the provided SQL query, and parses the
+    results into MetricResult objects. It also handles exceptions during
+    execution and validation, packaging the outcome into a standardized
+    JobResult object.
 
     Args:
-        query_config (QueryTemplatesConfig): Configuration for query templates.
-        metrics (Metrics): Registry of available metrics.
+        connector (PrecomputeConnector): The database connector used to execute
+            the SQL query.
     """
 
-    def __init__(self, query_config: QueryTemplatesConfig, metrics: Metrics):
-        self.templates_config = query_config
-        self.metrics = metrics
-        self.env = Environment(loader=FileSystemLoader(query_config.dir))
+    def __init__(self, connector: PrecomputeConnector):
+        self._connector = connector
 
-    def render_base_calculation_query(
-        self,
-        obs: Observation,
-        purpose: CalculationPurpose,
-        experiment_metric_names: list[str] | None = None,
-    ) -> str:
-        """Renders the base calculation query using the provided template.
+    def run_job(self, job_id: int, sql: str) -> JobResult:
+        logger.info("Job #{job_id}: Executing SQL:\n{sql}", job_id=job_id, sql=_trunc(sql))
+        try:
+            rows = self._connector.fetch_results(sql)
+            metrics = [MetricResult(job_id=int(job_id), **r.model_dump()) for r in rows]
+            logger.info("Job #{job_id}: received {count} metrics.", job_id=job_id, count=len(metrics))
+            return _ok(job_id, metrics)
+        except ValidationError as e:
+            logger.exception("Job #{job_id}: Failed to validate results.", job_id=job_id)
+            return _err(job_id, f"Validation error: {e}")
+        except Exception as e:
+            logger.exception("Job #{job_id}: SQL execution failed.", job_id=job_id)
+            return _err(job_id, f"Execution error: {e}")
 
-        Args:
-            obs (Observation): The observation data to include in the query.
-            purpose (CalculationPurpose): The purpose of the calculation.
-            experiment_metric_names (list[str] | None, optional): List of metric names
-                to include in the calculation. Defaults to None.
 
-        Returns:
-            str: The rendered SQL query string.
-        """
-        calc_scenario_path = self.templates_config.scenarios.get(str(obs.calculation_scenario))
-        if not calc_scenario_path:
-            error_message = (f"Could not find calculation scenario path "
-                            f"defined for observation <{obs.calculation_scenario}>")
-            logger.error(error_message)
-            raise Exception(error_message)
-        template = self.env.get_template(calc_scenario_path)
-        experiment_metrics_list, user_formula_list = self.metrics.resolve(aliases=experiment_metric_names)
+class JobGateway:
+    """Provides a transactional interface for job and metric persistence.
 
-        return template.render(
-            observation=obs,
-            experiment_metrics_list=experiment_metrics_list,
-            user_formula_list=user_formula_list,
-            purpose=purpose,
+    This class acts as a facade to the database, handling all state changes for
+    calculation jobs and the storage of computed metrics. It ensures that job
+    statuses are correctly updated throughout their lifecycle and that results
+    are stored atomically.
+
+    Args:
+        engine (Engine): The SQLAlchemy engine for database communication.
+    """
+
+    def __init__(self, engine: Engine):
+        self._jobs = JobHandler(engine)
+        self._precompute = PrecomputeHandler(engine)
+
+    def create_pending(self, observation_id: int):
+        job = self._jobs.create(
+            observation_id=observation_id,
+            query="",
+            status=JobStatus.PENDING,
         )
+        if not job or not job.id:
+            raise RuntimeError(f"Could not create job for observation #{observation_id}")
+        return job
+
+    def update(self, job_id: int, **fields):
+        job = self._jobs.update(id_=job_id, **fields)
+        if not job or not job.id:
+            raise RuntimeError(f"Could not update job #{job_id}")
+        return job
+
+    def set_query_and_running(self, job_id: int, sql: str):
+        self.update(job_id, query=sql, status=JobStatus.RUNNING)
+
+    def finish(self, job_id: int, result: JobResult):
+        """Sets status to COMPLETED on success, or FAILED with a message on error."""
+        if result.success:
+            self.update(job_id, status=JobStatus.COMPLETED)
+        else:
+            self.update(job_id, status=JobStatus.FAILED, error_message=result.error_message)
+
+    def store_metrics(self, metrics: list[MetricResult]) -> int:
+        payload = [m.model_dump() for m in metrics]
+        if not payload:
+            return 0
+        self._precompute.bulk_insert(payload)
+        logger.info("Stored {count} metrics.", count=len(payload))
+        return len(payload)
 
 
 class CalculationRunner:
-    """Manages the creation, execution, and tracking of metrics calculation jobs.
+    """Orchestrates the entire metrics calculation process.
 
-    This class handles the complete lifecycle of calculation jobs, including query
-    rendering, job execution, and result storage. It provides both synchronous and
-    asynchronous execution capabilities.
+    This class coordinates the different components (rendering, execution, storage)
+    to run a metrics calculation job from start to finish. It manages the job's
+    lifecycle, from creation to finalization, handling errors at each step.
+
+    The process involves:
+    1. Creating a pending job entry in the database.
+    2. Rendering the appropriate SQL query for the given observation.
+    3. Executing the query and fetching results.
+    4. Storing the resulting metrics in the precompute table.
+    5. Updating the job's final status (COMPLETED or FAILED).
 
     Args:
         connector (PrecomputeConnector): Database connector for executing queries.
-        engine (Engine): SQLAlchemy engine instance.
-        renderer (QueryRenderer): Query renderer instance for generating SQL queries.
+        engine (Engine): SQLAlchemy engine instance for job management.
+        renderer (QueryRenderer): Renderer for generating SQL queries.
     """
 
     def __init__(self, connector: PrecomputeConnector, engine: Engine, renderer: QueryRenderer):
-        self._connector = connector
-        self._engine = engine
-        self._renderer = renderer
-        self._job_handler = JobHandler(self._engine)
-        self._precompute_handler = PrecomputeHandler(self._engine)
-
-    def _run_job(self, job: CalculationJob) -> JobResult:
-        """Executes a calculation job and processes its results.
-
-        Args:
-            job (CalculationJob): The job to execute.
-
-        Returns:
-            JobResult: The result of the job execution, including any metrics or errors.
-        """
-
-        self._job_handler.update(job.id, status=JobStatus.RUNNING)
-        logger.info(f"Running job_id #{job.id} \nQuery:\n{job.query}")
-        try:
-            query_result = self._connector.fetch_results(str(job.query))
-            metric_results = [MetricResult(job_id=int(job.id), **qmr.model_dump()) for qmr in query_result]
-            logger.info(f"Job id #{job.id} completed with {len(metric_results)} metrics")
-            return JobResult.success_result(job_id=int(job.id), metric_results=metric_results)
-        except ValidationError as e:
-            error_message = f"Job_id: #{job.id} execution failed because of validation error: {str(e)}"
-            logger.exception(error_message)
-            return JobResult.error_result(job_id=int(job.id), error_message=error_message)
-        except Exception as e:
-            error_message = f"Job_id: #{job.id} execution failed: {str(e)}"
-            logger.exception(error_message)
-            return JobResult.error_result(job_id=int(job.id), error_message=error_message)
-
-    def _store_results(self, metric_results: list[MetricResult] | None):
-        """Stores the calculation results in the database.
-
-        Args:
-            metric_results (list[MetricResult] | None): The results to store.
-
-        Raises:
-            Exception: If no results are provided or storage fails.
-        """
-
-        if metric_results is None:
-            logger.info("No metric results found")
-            raise Exception("No metric results found")
-        try:
-            self._precompute_handler.bulk_insert([mr.model_dump() for mr in metric_results])
-            logger.info(f"Successfully stored {len(metric_results)} metrics")
-        except Exception:
-            logger.exception("Failed to store precompute results")
-            raise
+        self.jobs = JobGateway(engine)
+        self.exec = CalculationExecutor(connector)
+        self.renderer = renderer
 
     def run_calculation(
         self,
         obs: Observation | ObservationDTO,  # type: ignore[valid-type]
         purpose: CalculationPurpose,
-        experiment_metric_names_: list[str] | None = None,
-    ) -> JobResult | None:
-        """Executes a calculation for a given observation.
+        experiment_metric_names: list[str] | None = None,
+    ) -> JobResult:
+        try:
+            job = self.jobs.create_pending(int(obs.id))  # type: ignore[union-attr]
+        except Exception as e:
+            # DB/job creation unavailable - cannot write error to job.
+            obs_id = getattr(obs, "id", "?")
+            logger.exception("CREATE_JOB failed for observation #{obs_id}", obs_id=obs_id)
+            # Return JobResult with sentinel job_id=0 (job not created).
+            return _err(None, f"Job create failed for observation #{obs_id}: {e}")
 
-        Creates a job, runs it, and stores the results based on the calculation purpose.
-        For regular calculations, results are stored in the database.
-        For planning purposes, results are returned directly.
-
-        Args:
-            obs (Observation | ObservationDTO): The observation to calculate metrics for.
-            purpose (CalculationPurpose): The purpose of the calculation.
-            experiment_metric_names_ (list[str] | None): List of metric names to include.
-
-        Returns:
-            JobResult | None: The job result containing metrics and status information.
-        """
-        query = self._renderer.render_base_calculation_query(
-            obs, purpose=purpose, experiment_metric_names=experiment_metric_names_
-        )
-
-        job = self._job_handler.create(
-            observation_id=obs.id,  # type: ignore[union-attr]
-            query=query,
-            status=JobStatus.PENDING,
-        )
-
-        if job is None:
-            error_message = f"Failed to create job for observation id #{obs.id}"  # type: ignore[union-attr]
-            logger.error(error_message)
-            raise Exception(error_message)
-
-        job_result = self._run_job(job)
-
-        if job_result.success:
-            self._job_handler.update(job.id, status=JobStatus.COMPLETED)
-            logger.info(
-                f"Calculation for observation id #{obs.id} completed with "  # type: ignore[union-attr]
-                f"{len(job_result.metric_results) if job_result.metric_results else 0} "
-                f"metrics"
+        # 2) Render SQL
+        try:
+            sql = self.renderer.render(
+                obs=obs,
+                purpose=purpose,
+                experiment_metric_names=experiment_metric_names,
             )
-            if purpose == CalculationPurpose.REGULAR and job_result.metric_results:
-                self._store_results(job_result.metric_results)
-        else:
-            self._job_handler.update(
-                id_=job.id, status=JobStatus.FAILED, error_message=job_result.error_message
-            )
-            logger.warning(f"Calculation for observation id #{obs.id} failed: {job_result.error_message}")  # type: ignore[union-attr]
-        return job_result
+        except Exception as e:
+            msg = f"Render error: {e}"
+            logger.exception("RENDER failed for job #{job_id}", job_id=job.id)
+            self.jobs.update(job.id, status=JobStatus.FAILED, error_message=msg)
+            return _err(int(job.id), msg)
 
-    def run_in_background(self, obs: Observation, purpose: CalculationPurpose):
-        """Executes a calculation asynchronously in a background thread.
+        # 3) Set SQL and run
+        self.jobs.set_query_and_running(job.id, sql)
 
-        Args:
-            obs (Observation): The observation to calculate metrics for.
-            purpose (CalculationPurpose): The purpose of the calculation.
-        """
+        # 4) Execute SQL
+        result = self.exec.run_job(job.id, sql)
 
-        thread = Thread(target=self.run_calculation, args=(obs, purpose))
-        thread.start()
+        # 5) Store metrics on success (REGULAR only)
+        if result.success and purpose == CalculationPurpose.REGULAR and result.metric_results:
+            try:
+                self.jobs.store_metrics(result.metric_results)
+            except Exception as e:
+                logger.exception("STORE failed for job #{job_id}", job_id=job.id)
+                result = _err(int(job.id), f"Store error: {e}")
+
+        # 6) Finalize job status based on result
+        try:
+            self.jobs.finish(job.id, result)
+        except Exception:
+            # If the final update fails, log it, but return the calculation result.
+            logger.exception("FINISH failed for job #{job_id}", job_id=job.id)
+
+        return result

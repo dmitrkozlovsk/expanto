@@ -5,13 +5,14 @@ It orchestrates the display of experiment results, including job selection,
 group filtering, significance calculations, and the presentation of results in tables.
 """
 
+from concurrent.futures import Future
 from typing import Any
 
 import pandas as pd  # type: ignore
 import streamlit as st
 
 from src.services.analytics.calculators import SignificanceCalculator
-from src.ui.actions import run_calculation_for_observation
+from src.ui.actions import run_observation_calculation
 from src.ui.common import URLParams, put_return_in_app_ctx
 from src.ui.data_loaders import (
     get_observation_by_id,
@@ -120,13 +121,16 @@ class ResultsPage:
             return None
 
         try:
-            job_result = run_calculation_for_observation(**st.session_state.obs_to_be_calculated)
+            job_result = run_observation_calculation(**st.session_state.obs_to_be_calculated)
         except Exception as e:
             job_result = None
             error_message = f"❌ Failed to run calculation: `{e}`"
             st.error(error_message)
         finally:
             del st.session_state["obs_to_be_calculated"]
+        if isinstance(job_result, Future):
+            st.rerun()
+            return None
         if job_result and not job_result.success and job_result.error_message:
             error_message = f"❌ Job calculation ended with error: `{job_result.error_message}`"
             st.error(error_message)

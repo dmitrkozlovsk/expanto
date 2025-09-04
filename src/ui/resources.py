@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor
 from functools import reduce
 
 import streamlit as st
@@ -11,8 +13,17 @@ from sqlalchemy.engine import Engine
 from src.logger_setup import logger
 from src.services.metric_register import Metrics
 from src.services.runners.connectors import ConnectorResolver
-from src.services.runners.executors import CalculationRunner, QueryRenderer
+from src.services.runners.executors import CalculationRunner
+from src.services.runners.renderer import QueryRenderer
 from src.settings import AssistantServiceCfg, Config, Secrets
+
+
+@st.cache_resource
+def get_thread_pool_executor(max_workers: int | None = None) -> ThreadPoolExecutor:
+    if not max_workers:
+        cores = os.cpu_count() or 4
+        max_workers = min(64, cores * 6)
+    return ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="expanto-app")
 
 
 @st.cache_resource
@@ -141,10 +152,12 @@ def load_assistant_service_cfg() -> AssistantServiceCfg:
     """
     return Config().assistant.service
 
+
 @st.cache_resource
 def load_calculation_scenarios() -> list[str]:
     config = Config()
     return list(config.queries.scenarios.keys())
+
 
 def init_resources() -> tuple[Engine, Metrics, CalculationRunner, AssistantServiceCfg]:
     """Initialize and return all main application resources.

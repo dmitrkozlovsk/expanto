@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from dataclasses import dataclass
+
+from pydantic import BaseModel, Field, model_validator
 
 from src.domain.enums import ExperimentMetricType
 
@@ -89,15 +91,14 @@ class MetricResult(QueryMetricResult):
     job_id: int
 
 
-class JobResult(BaseModel):
+@dataclass
+class JobResult:
     """Represents the execution result of a calculation job."""
 
-    job_id: int
+    job_id: int | None
     success: bool
     metric_results: list[MetricResult] | None = None
     error_message: str | None = None
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @classmethod
     def success_result(cls, job_id: int, metric_results: list[MetricResult]) -> JobResult:
@@ -105,6 +106,6 @@ class JobResult(BaseModel):
         return cls(job_id=job_id, success=True, metric_results=metric_results)
 
     @classmethod
-    def error_result(cls, job_id: int, error_message: str) -> JobResult:
+    def error_result(cls, job_id: int | None, error_message: str) -> JobResult:
         """Create an error job result with error message."""
         return cls(job_id=job_id, success=False, error_message=error_message)

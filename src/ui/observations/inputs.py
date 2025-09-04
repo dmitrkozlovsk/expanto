@@ -65,10 +65,12 @@ class ObservationsFilter:
                 container_columns = st.columns(2)
                 with container_columns[0]:
                     created_at_start_date = st.date_input(
-                        "Created from", datetime.today() - timedelta(days=180)
+                        "Created from", dt_utils.utc_today() - timedelta(days=180)
                     )
                 with container_columns[1]:
-                    created_at_end_date = st.date_input("Created to", datetime.today() + timedelta(days=1))
+                    created_at_end_date = st.date_input(
+                        "Created to", dt_utils.utc_today() + timedelta(days=1)
+                    )
 
         with col4:
             limit_filter = st.number_input("Limit", min_value=2, max_value=500, value=50, step=25)
