@@ -7,7 +7,7 @@ All functions use Streamlit's caching mechanism to improve performance.
 
 from __future__ import annotations
 
-import json
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 import streamlit as st
@@ -382,9 +382,9 @@ def get_precomputes_for_planning(
     job_result = runner.run_calculation(
         dummy_observation,
         CalculationPurpose.PLANNING,
-        experiment_metric_names_=experiment_metric_names,
+        experiment_metric_names=experiment_metric_names,
     )
-    return json.loads(job_result.model_dump_json()) if job_result else {}
+    return asdict(job_result) if job_result else {}
 
 
 # ---------------------------------- OTHER ----------------------------------

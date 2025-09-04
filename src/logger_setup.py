@@ -15,10 +15,11 @@ def get_logfire_config() -> dict:
             show_project_link=False,
             verbose=False,
             colors="auto",
-    ),
+        ),
     }
     try:
         from src.settings import Config, Secrets
+
         secrets = Secrets()
         config = Config()
         if config.logfire.send_to_logfire:
@@ -28,8 +29,9 @@ def get_logfire_config() -> dict:
         return _logfire_config
     except Exception:
         pass
-    
+
     return _logfire_config
+
 
 logfire_config = get_logfire_config()
 logfire.configure(**logfire_config)

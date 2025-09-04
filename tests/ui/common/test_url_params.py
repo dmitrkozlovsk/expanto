@@ -1,4 +1,4 @@
-"""Tests for UI common utilities."""
+"""Tests for UrlParams utilities."""
 
 import pytest
 from streamlit.testing.v1 import AppTest
@@ -12,6 +12,7 @@ def url_params_app():
     import streamlit as st
 
     from src.ui.common import URLParams
+
     st.write("Streamlit")
     result = URLParams.parse()
     st.session_state["parsed_url_params"] = result

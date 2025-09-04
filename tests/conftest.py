@@ -1,4 +1,3 @@
-
 import pytest
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from sqlalchemy import Engine, create_engine

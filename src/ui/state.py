@@ -11,6 +11,7 @@ from src.ui.chat.schemas import AppContext, ChatMessage, ChatState, MessageType,
 if TYPE_CHECKING:
     from src.ui.chat.schemas import ChatResponse
 
+
 class AppContextManager:
     """
     Manager for app context operations using Streamlit session state.
@@ -30,12 +31,11 @@ class AppContextManager:
         app_context = AppContextManager.get_or_create_state()
         app_context.page_name = page_name
 
-
     @staticmethod
     def set_page_mode(page_mode: str) -> None:
         """Set the current page mode in the app context."""
         app_context = AppContextManager.get_or_create_state()
-        app_context.page_mode = page_mode   
+        app_context.page_mode = page_mode
 
     @staticmethod
     def add_selected(key: str, value: Any) -> None:
@@ -47,6 +47,7 @@ class AppContextManager:
         """
         app_context = AppContextManager.get_or_create_state()
         app_context.selected[key] = value
+
 
 class ChatStateManager:
     """Manager for chat state operations using Streamlit session state."""
@@ -86,7 +87,7 @@ class ChatStateManager:
 
         Args:
             user_input: The user input string or None to clear.
-        """ 
+        """
         state = ChatStateManager.get_or_create_state()
         state.active_user_input = user_input
 

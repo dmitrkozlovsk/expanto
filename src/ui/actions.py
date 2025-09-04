@@ -10,7 +10,7 @@ Actions are grouped by functionality:
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import streamlit as st
 
@@ -27,9 +27,11 @@ from src.ui.data_loaders import (
     get_observations_for_filter,
     get_observations_full_df,
 )
-from src.ui.resources import load_calculation_runner, load_engine
+from src.ui.resources import get_thread_pool_executor, load_calculation_runner, load_engine
 
 if TYPE_CHECKING:
+    from concurrent.futures import Future
+
     import pandas as pd  # type: ignore
 
     from src.domain.models import Observation
@@ -257,18 +259,21 @@ def run_regular_calculation(observation: Observation) -> JobResult | None:
     return job_result
 
 
-def run_regular_calculation_in_background(observation: Observation) -> None:
+def run_regular_calculation_in_background(observation: Observation) -> Future:
     """Runs a regular calculation for a given observation in the background.
 
     Args:
         observation: The observation to run the calculation for.
     """
     runner = load_calculation_runner()
-    runner.run_in_background(observation, CalculationPurpose.REGULAR)
-    return None
+    executor = get_thread_pool_executor()
+    future = executor.submit(runner.run_calculation, observation, CalculationPurpose.REGULAR)
+    return future
 
 
-def run_calculation_for_observation(observation_id: int, calc_type: str) -> JobResult | None:
+def run_observation_calculation(
+    observation_id: int, calc_type: Literal["foreground", "background"]
+) -> JobResult | None:
     """Handles running a calculation for an observation based on the calculation type.
 
     This function retrieves an observation by its ID and then runs a calculation
@@ -294,6 +299,6 @@ def run_calculation_for_observation(observation_id: int, calc_type: str) -> JobR
         get_jobs_by_observation_id.clear()  # type: ignore[attr-defined]
         return job_result
     elif calc_type == "background":
-        return run_regular_calculation_in_background(observation)
+        run_regular_calculation_in_background(observation)
     else:
         raise ValueError(f"Invalid calculation type: {calc_type}. Must be 'foreground' or 'background'.")
