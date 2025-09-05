@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
-
+from concurrent.futures import Future
 from pydantic import BaseModel
 
 from assistant.core.schemas import AgentsOutput, ExperimentDefinition
@@ -95,6 +95,7 @@ class ChatState:
     """Data class representing the complete chat state."""
 
     active_user_input: str | None = None
+    future_result: Future[InvokeResult] | None = None
     msg_history: list[ChatMessage] = field(default_factory=list)
     supplements: dict[str, Any] = field(default_factory=dict)
     usage: TokenUsage | None = None
