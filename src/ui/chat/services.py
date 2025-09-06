@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -14,11 +14,8 @@ from src.ui.chat.schemas import (
     ChatResponse,
     ChatState,
     InvokeResult,
-
 )
-
 from src.utils import JsonUtils
-
 
 if TYPE_CHECKING:
     from src.ui.chat.schemas import AppContext
@@ -131,9 +128,11 @@ class ChatController:
         invoke_result: InvokeResult = self.assistant_service.invoke(request)
 
         if invoke_result.success and invoke_result.assistant_response:
-            chat_response = self._create_success_response(invoke_result.assistant_response)
+            chat_response = self._create_success_response(
+                assistant_response=invoke_result.assistant_response
+            )
         else:
-            chat_response = self._create_error_response(invoke_result.error)
+            chat_response = self._create_error_response(error=invoke_result.error)
         return chat_response
 
     def _create_success_response(self, assistant_response: AssistantResponse) -> ChatResponse:

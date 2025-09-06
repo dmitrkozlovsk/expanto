@@ -74,7 +74,7 @@ def test_decompose_output_exp_definition(experiment_definition, token_usage):
     assert isinstance(supp, ExperimentDefinition)
 
 
-@patch("src.ui.chat.services.enrich_app_ctx")
+@patch("src.ui.chat.elements.enrich_app_ctx")
 def test_process_user_input_success_string(
     mock_ctx, chat_controller, mock_assistant_service, chat_state, token_usage
 ):
@@ -85,7 +85,7 @@ def test_process_user_input_success_string(
         assistant_response=assistant_response, success=True, error=None
     )
 
-    response = chat_controller.process_user_input("Test", chat_state)
+    response = chat_controller.process_user_input("Test", chat_state, mock_ctx)
 
     assert response.success
     assert response.chat_msg == "Response OK"
@@ -93,7 +93,7 @@ def test_process_user_input_success_string(
     assert response.error_msg is None
 
 
-@patch("src.ui.chat.services.enrich_app_ctx")
+@patch("src.ui.chat.elements.enrich_app_ctx")
 def test_process_user_input_success_object(
     mock_ctx, chat_controller, mock_assistant_service, chat_state, experiment_definition, token_usage
 ):
@@ -104,13 +104,13 @@ def test_process_user_input_success_object(
         assistant_response=assistant_response, success=True, error=None
     )
 
-    response = chat_controller.process_user_input("Experiment", chat_state)
+    response = chat_controller.process_user_input("Experiment", chat_state, mock_ctx)
 
     assert response.success
     assert response.supplement == experiment_definition
 
 
-@patch("src.ui.chat.services.enrich_app_ctx")
+@patch("src.ui.chat.elements.enrich_app_ctx")
 def test_process_user_input_error(mock_ctx, chat_controller, mock_assistant_service, chat_state):
     """Test user input processing when assistant service returns error."""
     mock_ctx.return_value = AppContext()
@@ -118,13 +118,13 @@ def test_process_user_input_error(mock_ctx, chat_controller, mock_assistant_serv
         assistant_response=None, success=False, error="Failure"
     )
 
-    response = chat_controller.process_user_input("Fail", chat_state)
+    response = chat_controller.process_user_input("Fail", chat_state, mock_ctx)
 
     assert not response.success
     assert response.error_msg == "Failure"
 
 
-@patch("src.ui.chat.services.enrich_app_ctx")
+@patch("src.ui.chat.elements.enrich_app_ctx")
 def test_process_user_input_no_response_on_success(
     mock_ctx, chat_controller, mock_assistant_service, chat_state
 ):
@@ -134,7 +134,7 @@ def test_process_user_input_no_response_on_success(
         assistant_response=None, success=True, error=None
     )
 
-    response = chat_controller.process_user_input("Empty", chat_state)
+    response = chat_controller.process_user_input("Empty", chat_state, mock_ctx)
 
     assert not response.success
     assert response.error_msg == "Unknown error occurred"

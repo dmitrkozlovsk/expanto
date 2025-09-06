@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import time
 import uuid
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
-from concurrent.futures import Future
+
 from pydantic import BaseModel
 
 from assistant.core.schemas import AgentsOutput, ExperimentDefinition

@@ -12,12 +12,11 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 from src.settings import AssistantServiceCfg
-from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField
+from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField, chat_scroll
 from src.ui.chat.schemas import MessageType, Role
 from src.ui.chat.services import ChatController, HttpAssistantService
-from src.ui.resources import load_assistant_service_cfg, get_thread_pool_executor
+from src.ui.resources import load_assistant_service_cfg
 from src.ui.state import ChatStateManager
-from src.ui.chat.elements import chat_scroll
 
 if TYPE_CHECKING:
     from src.ui.chat.schemas import ChatState

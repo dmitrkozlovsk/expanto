@@ -10,9 +10,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from src.ui.chat.schemas import MessageType, Role
-from src.ui.state import ChatStateManager
-from src.ui.resources import get_thread_pool_executor
 from src.ui.common import enrich_app_ctx
+from src.ui.resources import get_thread_pool_executor
+from src.ui.state import ChatStateManager
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -248,7 +248,6 @@ class UserInputField:
                 enriched_app_ctx,
             )
             ChatStateManager.set_future_result(future_result)
-            ChatStateManager.set_user_input(user_input)
             ChatStateManager.add_message(
                 message_type=MessageType.MESSAGE,
                 role=Role.USER,
