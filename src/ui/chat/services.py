@@ -141,6 +141,7 @@ class ChatController:
             supplement=supplement,
             usage=assistant_response.usage,
             success=True,
+            thinking=assistant_response.thinking
         )
 
     def _create_error_response(self, error: str | None) -> ChatResponse:
@@ -151,4 +152,5 @@ class ChatController:
             success=False,
             usage=None,
             error_msg=error or "Unknown error occurred",
+            thinking=None
         )

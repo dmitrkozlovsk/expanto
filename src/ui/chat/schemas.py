@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from assistant.core.schemas import AgentsOutput, ExperimentDefinition
+from assistant.core.schemas import ExperimentDefinition, AssistantResponse
 
 # -------------------- INPUT SCHEMAS -------------------- #
 
@@ -38,13 +38,6 @@ class TokenUsage(BaseModel):
     details: dict[str, int] | None = None
 
 
-class AssistantResponse(BaseModel):
-    """Model for assistant response from the API."""
-
-    output: AgentsOutput
-    usage: TokenUsage
-
-
 @dataclass
 class InvokeResult:
     """Result container for assistant service invocation."""
@@ -62,6 +55,7 @@ class ChatResponse(BaseModel):
     success: bool
     usage: TokenUsage | None = None
     error_msg: str | None = None
+    thinking: str | None = None
 
 
 # -------------------- STATE SCHEMAS -------------------- #
@@ -88,6 +82,7 @@ class ChatMessage:
     type: MessageType
     role: Role
     content: str
+    thinking: str | None = None
     timestamp: float = field(default_factory=time.time)
 
 

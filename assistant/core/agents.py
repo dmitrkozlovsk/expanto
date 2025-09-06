@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 from pydantic_ai.common_tools.tavily import tavily_search_tool
+from pydantic_ai.messages import ModelResponse, ThinkingPart, ModelMessage
 
 from assistant.core.models import ModelFactory
 from assistant.core.schemas import Deps, ExperimentDefinition, OrchestrationResult, RouterOutput
@@ -240,6 +241,7 @@ class AgentOrchestrator:
                 output=route_response.output.follow_up_questions,
                 message_history=message_history,
                 usage=route_response.usage(),
+                thinking=None,
             )
 
         selected_agent = self.agent_manager.get_agent(route_output.route_id)
@@ -252,8 +254,29 @@ class AgentOrchestrator:
             multipurpose_agent = self.agent_manager.get_agent("multipurpose")
             response = await multipurpose_agent.run(user_input, deps=deps, message_history=message_history)
 
+        #Extract thinking parts
+        def extract_thinking_parts(new_messages: list[ModelMessage]) -> str | None:
+            model_thinking_parts = []
+            try:
+                for message in response.new_messages():
+                    print("\n====message====\n\n,", message)
+                    if isinstance(message, ModelResponse):
+                        print("\n====message.parts====\n\n,", message.parts)
+                        for part in message.parts:
+                            print("\n====part====\n\n,", part)
+                            if isinstance(part, ThinkingPart):
+                                model_thinking_parts.append(part.content)
+            except Exception as e:
+                return None
+            return '\n'.join(model_thinking_parts) if model_thinking_parts else None
+
+        response_thinking = extract_thinking_parts(response.new_messages())
+        print("\n====thinking====\n\n,", response_thinking)
         cleaned_messages = drop_empty_messages(response.all_messages())
 
         return OrchestrationResult(
-            output=response.output, message_history=cleaned_messages, usage=response.usage()
+            output=response.output,
+            message_history=cleaned_messages,
+            thinking=response_thinking,
+            usage=response.usage(),
         )
