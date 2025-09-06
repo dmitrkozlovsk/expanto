@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -95,6 +96,7 @@ class ChatState:
     """Data class representing the complete chat state."""
 
     active_user_input: str | None = None
+    future_result: Future[InvokeResult] | None = None
     msg_history: list[ChatMessage] = field(default_factory=list)
     supplements: dict[str, Any] = field(default_factory=dict)
     usage: TokenUsage | None = None

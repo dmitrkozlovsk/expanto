@@ -4,8 +4,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from streamlit.testing.v1 import AppTest
 
 
-def thread_pool_app(
-    max_workers: int | None = None, num_tasks: int = 10) -> None:
+def thread_pool_app(max_workers: int | None = None, num_tasks: int = 10) -> None:
     """Test Streamlit app for ThreadPoolExecutor resource."""
     import queue
     import time
@@ -31,9 +30,10 @@ def thread_pool_app(
     # Submit tasks and store futures in session state
     if "futures" not in st.session_state:
         st.session_state.futures = []
-        task_func = (
-            lambda: task(results_q)
-        )  # Capture queue instance
+
+        def task_func():
+            task(results_q)
+
         for _ in range(num_tasks):
             future = pool.submit(task_func)
             st.session_state.futures.append(future)
@@ -68,7 +68,6 @@ def test_thread_pool_task_execution():
     # Wait for all futures to complete
     for future in futures:
         future.result()  # This will block until the future is done
-
 
     results_queue: queue.Queue = at.session_state.results_queue
     assert results_queue.qsize() == num_tasks

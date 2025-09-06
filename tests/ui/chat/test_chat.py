@@ -90,3 +90,29 @@ def test_user_input_success_response(mock_process, app):
     assert app.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
     assert app.session_state["chat_state"].usage.total_tokens == 20
     assert app.session_state["chat_state"].active_user_input is None
+    assert app.session_state["chat_state"].future_result is None
+
+
+def test_handle_future_response_happy_path(app):
+    """Test happy path for handling future response."""
+    from concurrent.futures import Future
+
+    future = Future()
+    mock_response = make_success_response()
+    mock_response.chat_msg = "Async Hello"
+
+    chat_state = app.session_state["chat_state"]
+    chat_state.future_result = future
+
+    app.run()
+    assert "Thinking..." in app.status[0].label
+
+    future.set_result(mock_response)
+
+    app.run()
+
+    assert app.session_state["chat_state"].future_result is None
+    assert "Async Hello" in app.chat_message[-1].markdown[0].value
+    assert app.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
+    assert app.session_state["chat_state"].usage.total_tokens == 20
+    assert len(app.status) == 0

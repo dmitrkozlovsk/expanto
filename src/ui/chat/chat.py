@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 from src.settings import AssistantServiceCfg
-from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField
+from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField, chat_scroll
 from src.ui.chat.schemas import MessageType, Role
 from src.ui.chat.services import ChatController, HttpAssistantService
 from src.ui.resources import load_assistant_service_cfg
@@ -45,6 +45,7 @@ class Chat:
     """Main chat component for the application."""
 
     @staticmethod
+    @st.fragment
     def render() -> None:
         """Render the complete chat interface."""
         # Initialize config and services
@@ -59,19 +60,30 @@ class Chat:
         )
         agent_placeholder = history_container.agent_placeholder
         # TODO: feature - select mode for agent (auto, create, multipurpose)
-        UserInputField.render()  # if user input: save to chat state and rerun
+        UserInputField.render(controller)  # if user input: save to chat state and rerun
 
         # Handle input and response logic
-        if user_input := chat_state.active_user_input:
-            agent_placeholder.show_status()
-            ChatStateManager.set_user_input(None)
-            try:
-                response = controller.process_user_input(user_input, chat_state)  # get result
-                agent_placeholder.handle_response(response)
-                ChatStateManager.update_state(response)
-            except Exception as e:
-                ChatStateManager.add_message(
-                    message_type=MessageType.ERROR, role=Role.ASSISTANT, content=str(e)
-                )
-            finally:  # prevent eternal loop
-                st.rerun()
+        run_every = 0.5 if chat_state.future_result else None
+
+        @st.fragment(run_every=run_every)
+        def handle_future_response(placeholder):
+            state = ChatStateManager.get_or_create_state()
+            if not state.future_result:
+                return
+            if state.future_result.done():
+                try:
+                    response = state.future_result.result()  # get result
+                    state.future_result = None
+                    agent_placeholder.handle_response(response)
+                    ChatStateManager.update_state(response)
+                except Exception as e:
+                    ChatStateManager.add_message(
+                        message_type=MessageType.ERROR, role=Role.ASSISTANT, content=str(e)
+                    )
+                finally:  # prevent eternal loop
+                    st.rerun()
+            else:
+                placeholder.show_status()
+                chat_scroll()
+
+        handle_future_response(agent_placeholder)

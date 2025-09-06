@@ -33,6 +33,7 @@ class ResultsPage:
     """Encapsulates the logic and layout for the results page."""
 
     @classmethod
+    @st.fragment
     def render(cls, url_params: URLParams) -> None:
         """Renders the entire results page with chat layout.
 

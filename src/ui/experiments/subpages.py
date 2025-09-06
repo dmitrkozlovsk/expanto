@@ -29,6 +29,7 @@ class ExperimentListPage:
 
     @classmethod
     @put_return_in_app_ctx
+    @st.fragment
     def render(cls) -> dict[str, int] | None:
         """Renders the experiment list page.
 
@@ -71,6 +72,7 @@ class CreateExperimentPage:
 
     @classmethod
     @put_return_in_app_ctx
+    @st.fragment
     def render(cls) -> None:
         """Renders the experiment creation page.
 
@@ -96,6 +98,7 @@ class UpdateExperimentPage:
 
     @classmethod
     @put_return_in_app_ctx
+    @st.fragment
     def render(cls, url_exp_id: int | None = None) -> dict[str, int] | None:
         """Renders the experiment update page.
 

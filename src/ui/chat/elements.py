@@ -10,6 +10,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from src.ui.chat.schemas import MessageType, Role
+from src.ui.common import enrich_app_ctx
+from src.ui.resources import get_thread_pool_executor
 from src.ui.state import ChatStateManager
 
 if TYPE_CHECKING:
@@ -234,10 +236,18 @@ class UserInputField:
     """Component for user input field."""
 
     @staticmethod
-    def render() -> None:
+    def render(controller) -> None:
         """Render the user input field and handle input."""
         if user_input := st.chat_input("Write..."):
-            ChatStateManager.set_user_input(user_input)
+            pool = get_thread_pool_executor()
+            enriched_app_ctx = enrich_app_ctx()
+            future_result = pool.submit(
+                controller.process_user_input,
+                user_input,
+                ChatStateManager.get_or_create_state(),
+                enriched_app_ctx,
+            )
+            ChatStateManager.set_future_result(future_result)
             ChatStateManager.add_message(
                 message_type=MessageType.MESSAGE, role=Role.USER, content=user_input
             )

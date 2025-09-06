@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -15,8 +15,10 @@ from src.ui.chat.schemas import (
     ChatState,
     InvokeResult,
 )
-from src.ui.common import enrich_app_ctx
 from src.utils import JsonUtils
+
+if TYPE_CHECKING:
+    from src.ui.chat.schemas import AppContext
 
 
 class HttpAssistantService:
@@ -107,7 +109,9 @@ class ChatController:
             return invoke_result.output.follow_up_message, invoke_result.output
         return f"{invoke_result.output}", invoke_result.output
 
-    def process_user_input(self, user_input: str, chat_state: ChatState) -> ChatResponse:
+    def process_user_input(
+        self, user_input: str, chat_state: ChatState, app_context: AppContext
+    ) -> ChatResponse:
         """Process user input and generate a chat response.
 
         Args:
@@ -117,18 +121,16 @@ class ChatController:
         Returns:
             ChatResponse containing the assistant's response or error information.
         """
-        enriched_context = enrich_app_ctx()
-
-        request = ChatRequest(
-            user_input=user_input, chat_uid=chat_state.chat_uid, app_context=enriched_context
-        )
+        request = ChatRequest(user_input=user_input, chat_uid=chat_state.chat_uid, app_context=app_context)
 
         invoke_result: InvokeResult = self.assistant_service.invoke(request)
 
         if invoke_result.success and invoke_result.assistant_response:
-            chat_response = self._create_success_response(invoke_result.assistant_response)
+            chat_response = self._create_success_response(
+                assistant_response=invoke_result.assistant_response
+            )
         else:
-            chat_response = self._create_error_response(invoke_result.error)
+            chat_response = self._create_error_response(error=invoke_result.error)
         return chat_response
 
     def _create_success_response(self, assistant_response: AssistantResponse) -> ChatResponse:

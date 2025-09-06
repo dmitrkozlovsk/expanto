@@ -110,3 +110,9 @@ class ChatStateManager:
             ChatStateManager.add_message(
                 message_type=MessageType.ERROR, role=Role.ASSISTANT, content=chat_response.error_msg
             )
+
+    @staticmethod
+    def set_future_result(future_result):
+        # todo add type annotation
+        state = ChatStateManager.get_or_create_state()
+        state.future_result = future_result
