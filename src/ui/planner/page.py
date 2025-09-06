@@ -26,6 +26,7 @@ class ExperimentPlannerPage:
     """Main page component for experiment planning and analysis."""
 
     @classmethod
+    @st.fragment
     def render(cls, url_params_: URLParams) -> None:
         """Render the experiment planner page.
 

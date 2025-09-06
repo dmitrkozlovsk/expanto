@@ -121,9 +121,7 @@ class ChatController:
         Returns:
             ChatResponse containing the assistant's response or error information.
         """
-        request = ChatRequest(
-            user_input=user_input, chat_uid=chat_state.chat_uid, app_context=app_context
-        )
+        request = ChatRequest(user_input=user_input, chat_uid=chat_state.chat_uid, app_context=app_context)
 
         invoke_result: InvokeResult = self.assistant_service.invoke(request)
 

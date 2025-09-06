@@ -35,16 +35,6 @@ def init() -> tuple[ChatState, ChatController, AssistantServiceCfg]:
     assistant_cfg = load_assistant_service_cfg()  # loaded from cache
     http_service = HttpAssistantService(assistant_cfg)
     controller = ChatController(http_service)
-    ss = st.session_state
-    for k, v in {
-        "polling_on": False,
-        "fut": None,
-        "resp": None,
-        "left_cnt": 0,
-        "pool": None,
-    }.items():
-        ss.setdefault(k, v)
-
     return chat_state, controller, assistant_cfg
 
 
@@ -74,7 +64,6 @@ class Chat:
 
         # Handle input and response logic
         run_every = 0.5 if chat_state.future_result else None
-        st.write(ChatStateManager.get_or_create_state())
 
         @st.fragment(run_every=run_every)
         def handle_future_response(placeholder):
@@ -96,5 +85,5 @@ class Chat:
             else:
                 placeholder.show_status()
                 chat_scroll()
-        handle_future_response(agent_placeholder)
 
+        handle_future_response(agent_placeholder)

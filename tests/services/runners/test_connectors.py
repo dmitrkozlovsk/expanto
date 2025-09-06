@@ -64,8 +64,9 @@ def test_run_query_snowflake_fails(fake_creds_snowflake):
     mock_connection.cursor.return_value = mock_cursor
     mock_connection.__enter__.return_value = mock_connection  # for `with` statement
 
-    with patch.object(SnowflakeConnector, "get_connection", return_value=mock_connection), pytest.raises(
-        RuntimeError, match="Query failed"
+    with (
+        patch.object(SnowflakeConnector, "get_connection", return_value=mock_connection),
+        pytest.raises(RuntimeError, match="Query failed"),
     ):
         connector.run_query("dummy query")
 

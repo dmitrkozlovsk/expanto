@@ -113,6 +113,6 @@ class ChatStateManager:
 
     @staticmethod
     def set_future_result(future_result):
-        #todo add type annotation
+        # todo add type annotation
         state = ChatStateManager.get_or_create_state()
         state.future_result = future_result

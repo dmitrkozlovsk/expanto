@@ -27,6 +27,7 @@ class ObservationListPage:
 
     @classmethod
     @put_return_in_app_ctx
+    @st.fragment
     def render(cls, url_exp_id: int | None) -> dict | None:
         """Render the observation list page.
 
@@ -62,6 +63,7 @@ class CreateObservationPage:
     """A page for creating a new observation."""
 
     @classmethod
+    @st.fragment
     def render(cls, url_params: URLParams) -> None:
         """Render the create observation page.
 
@@ -101,6 +103,7 @@ class UpdateObservationPage:
 
     @classmethod
     @put_return_in_app_ctx
+    @st.fragment
     def render(cls, url_params: URLParams) -> dict | None:
         """Render the update observation page.
 

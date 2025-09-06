@@ -249,8 +249,6 @@ class UserInputField:
             )
             ChatStateManager.set_future_result(future_result)
             ChatStateManager.add_message(
-                message_type=MessageType.MESSAGE,
-                role=Role.USER,
-                content=user_input
+                message_type=MessageType.MESSAGE, role=Role.USER, content=user_input
             )
             st.rerun()
