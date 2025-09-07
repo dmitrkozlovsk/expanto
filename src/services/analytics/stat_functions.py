@@ -1,16 +1,16 @@
-"""
-Statistical functions for A/B testing and experimental analysis.
+"""Statistical functions for experimental analysis.
 
-This module provides a collection of statistical functions for analyzing experimental data,
-including t-tests, z-tests, ratio metric analysis, and sample size calculations. The functions
-support both scalar and vectorized (numpy array) operations.
+This module provides a collection of statistical functions for analyzing experimental
+data, including t-tests, z-tests, ratio metric analysis, and sample size
+calculations. The functions support both scalar and vectorized (NumPy array)
+operations.
 
 Key features:
-- Welch's t-test for comparing means with unequal variances
-- Z-test for comparing proportions
-- Ratio metric analysis using delta method
-- Sample size calculations for various test types
-- Support for both scalar and vectorized operations
+- Welch's t-test for comparing means with unequal variances.
+- Z-test for comparing proportions.
+- Ratio metric analysis using the delta method.
+- Sample size calculations for various test types.
+- Support for both scalar and vectorized operations.
 """
 
 from __future__ import annotations
@@ -39,29 +39,32 @@ def ttest_welch(
     var_2: float | np.ndarray,
     n_2: float | int | np.ndarray,
 ) -> TestResult:
-    """
-    Perform Welch's t-test to compare two population means with unequal variances and sizes.
+    """Performs Welch's t-test for two independent samples.
+
+    This test compares the means of two populations with unequal variances and
+    sample sizes. It supports both scalar and vectorized inputs.
 
     Args:
-        mean_1 (float | np.ndarray): Sample mean of the first population.
-        var_1 (float | np.ndarray): Sample variance of the first population.
-        n_1 (float | int | np.ndarray): Sample size of the first population. Must be positive.
-        mean_2 (float | np.ndarray): Sample mean of the second population.
-        var_2 (float | np.ndarray): Sample variance of the second population.
-        n_2 (float | int | np.ndarray): Sample size of the second population. Must be positive.
+        mean_1: Sample mean of the first population.
+        var_1: Sample variance of the first population.
+        n_1: Sample size of the first population. Must be positive.
+        mean_2: Sample mean of the second population.
+        var_2: Sample variance of the second population.
+        n_2: Sample size of the second population. Must be positive.
 
     Returns:
-        TestResult: Named tuple containing:
-            - statistic: The t-statistic
-            - p_value: Two-tailed p-value
-            - ci: Confidence interval (ConfidenceInterval named tuple with lower and upper bounds)
-            - diff_abs: Absolute difference between means (mean_2 - mean_1)
-            - diff_ratio: Relative difference between means ((mean_2 - mean_1) / mean_1)
+        A `TestResult` named tuple with the following fields:
+        - statistic: The calculated t-statistic.
+        - p_value: The two-tailed p-value.
+        - ci: A `ConfidenceInterval` with lower and upper bounds.
+        - diff_abs: The absolute difference between means (mean_2 - mean_1).
+        - diff_ratio: The relative difference between means.
 
     Raises:
-        ValueError: If any variance is negative or any sample size is not positive
-        TypeError: If arguments are not all of the same type (all float or all np.ndarray)
-        ValueError: If np.ndarray arguments have different shapes
+        ValueError: If any variance is negative or sample size is not positive.
+        TypeError: If arguments are not of the same type (all float or all
+            np.ndarray).
+        ValueError: If np.ndarray arguments have different shapes.
     """
     # Check if all arguments are either float or np.ndarray
     args_list = [mean_1, var_1, n_1, mean_2, var_2, n_2]
@@ -77,12 +80,17 @@ def ttest_welch(
 
     t_diff = mean_2 - mean_1
     t_se = (var_2 / n_2 + var_1 / n_1) ** 0.5
-    t_stat = t_diff / t_se
+    t_stat = np.divide(t_diff, t_se, out=np.full_like(t_diff, np.nan, dtype=float), where=t_se != 0)
 
     df_numerator = (var_2 / n_2 + var_1 / n_1) ** 2
     df_denominator = (var_2**2) / (n_2**2 * (n_2 - 1)) + (var_1**2) / (n_1**2 * (n_1 - 1))
 
-    degrees_of_freedom = np.round(df_numerator / df_denominator)
+    degrees_of_freedom = np.divide(
+        df_numerator,
+        df_denominator,
+        out=np.full_like(df_numerator, np.nan, dtype=float),
+        where=df_denominator != 0,
+    )
 
     p_value = 2 * (1 - stdtr(degrees_of_freedom, abs(t_stat)))
 
@@ -107,27 +115,31 @@ def ztest_proportion(
     p_2: float | np.ndarray,
     n_2: float | int | np.ndarray,
 ) -> TestResult:
-    """
-    Z-test for comparing two proportions.
+    """Performs a Z-test for comparing two proportions.
+
+    This test is used to determine if there is a significant difference between
+    the proportions of two independent samples.
 
     Args:
-        p_1 (float | np.ndarray): Proportion in the first sample. Must be between 0 and 1.
-        n_1 (float | int | np.ndarray): Size of the first sample. Must be positive.
-        p_2 (float | np.ndarray): Proportion in the second sample. Must be between 0 and 1.
-        n_2 (float | int | np.ndarray): Size of the second sample. Must be positive.
+        p_1: Proportion in the first sample. Must be between 0 and 1.
+        n_1: Size of the first sample. Must be positive.
+        p_2: Proportion in the second sample. Must be between 0 and 1.
+        n_2: Size of the second sample. Must be positive.
 
     Returns:
-        TestResult: Named tuple containing:
-            - statistic: The z-statistic
-            - p_value: Two-tailed p-value
-            - ci: Confidence interval (ConfidenceInterval named tuple with lower and upper bounds)
-            - diff_abs: Absolute difference between proportions (p_2 - p_1)
-            - diff_ratio: Relative difference between proportions ((p_2 - p_1) / p_1)
+        A `TestResult` named tuple with the following fields:
+        - statistic: The calculated z-statistic.
+        - p_value: The two-tailed p-value.
+        - ci: A `ConfidenceInterval` with lower and upper bounds.
+        - diff_abs: The absolute difference between proportions (p_2 - p_1).
+        - diff_ratio: The relative difference between proportions.
 
     Raises:
-        ValueError: If any proportion is not between 0 and 1 or any sample size is not positive
-        TypeError: If arguments are not all of the same type (all float or all np.ndarray)
-        ValueError: If np.ndarray arguments have different shapes
+        ValueError: If any proportion is not between 0 and 1 or any sample
+            size is not positive.
+        TypeError: If arguments are not of the same type (all float or all
+            np.ndarray).
+        ValueError: If np.ndarray arguments have different shapes.
     """
     ValidationUtils.check_all_args_is_digit_or_ndarray([p_1, n_1, p_2, n_2])
     if all(isinstance(x, np.ndarray) for x in [p_1, n_1, p_2, n_2]):
@@ -142,7 +154,10 @@ def ztest_proportion(
     z_diff = p_2 - p_1
     p_pooled = (p_1 * n_1 + p_2 * n_2) / (n_1 + n_2)
     z_denominator = (p_pooled * (1 - p_pooled) * (1 / n_1 + 1 / n_2)) ** (1 / 2)
-    z_stat = z_diff / z_denominator
+
+    z_stat = np.zeros_like(z_diff, dtype=float)
+    np.divide(z_diff, z_denominator, out=z_stat, where=(z_denominator != 0))
+
     p_value = 2 * (1 - ndtr(abs(z_stat)))
     se = (p_1 * (1 - p_1) / n_1 + p_2 * (1 - p_2) / n_2) ** 0.5
 
@@ -151,7 +166,8 @@ def ztest_proportion(
     ci = ConfidenceInterval(ci_lower, ci_upper)
 
     # Handle division by zero for diff_ratio
-    diff_ratio = np.where(p_1 != 0, z_diff / p_1, np.inf)
+    diff_ratio = np.full_like(z_diff, np.inf, dtype=float)
+    np.divide(z_diff, p_1, out=diff_ratio, where=(p_1 != 0))
 
     return TestResult(statistic=z_stat, p_value=p_value, ci=ci, diff_abs=z_diff, diff_ratio=diff_ratio)
 
@@ -163,26 +179,26 @@ def ratio_metric_sample_variance(
     var_d: float | np.ndarray,
     cov: float | np.ndarray,
 ) -> float | np.ndarray:
-    """
-    Calculate the sample variance of a ratio metric using the delta method.
+    """Calculates the sample variance of a ratio metric using the delta method.
 
-    This function calculates the variance of a ratio metric where the ratio is defined
-        as mean_n / mean_d.
+    The variance of a ratio metric (mean_n / mean_d) is estimated based on the
+    means, variances, and covariance of its numerator and denominator.
 
     Args:
-        mean_n (float | np.ndarray): Mean of the numerator.
-        var_n (float | np.ndarray): Variance of the numerator. Must be non-negative.
-        mean_d (float | np.ndarray): Mean of the denominator. Cannot be zero.
-        var_d (float | np.ndarray): Variance of the denominator. Must be non-negative.
-        cov (float | np.ndarray): Covariance between numerator and denominator.
+        mean_n: Mean of the numerator.
+        var_n: Variance of the numerator. Must be non-negative.
+        mean_d: Mean of the denominator. Cannot be zero.
+        var_d: Variance of the denominator. Must be non-negative.
+        cov: Covariance between the numerator and denominator.
 
     Returns:
-        float | np.ndarray: The estimated variance of the ratio metric.
+        The estimated variance of the ratio metric.
 
     Raises:
-        ValueError: If any variance is negative or if mean_d is zero
-        TypeError: If arguments are not all of the same type (all float or all np.ndarray)
-        ValueError: If np.ndarray arguments have different shapes
+        ValueError: If any variance is negative or if mean_d is zero.
+        TypeError: If arguments are not of the same type (all float or all
+            np.ndarray).
+        ValueError: If np.ndarray arguments have different shapes.
     """
     ValidationUtils.check_all_args_is_digit_or_ndarray([mean_n, var_n, mean_d, var_d, cov])
     if all(isinstance(x, np.ndarray) for x in [mean_n, var_n, mean_d, var_d, cov]):
@@ -192,9 +208,16 @@ def ratio_metric_sample_variance(
     if np.any(var_n < 0) or np.any(var_d < 0):
         raise ValueError("Variances must be non-negative")
 
-    term1 = var_n / (mean_d**2)
-    term2 = (mean_n**2 / mean_d**4) * var_d
-    term3 = 2 * (mean_n / mean_d**3) * cov
+    mean_ne_zero_mask = mean_d != 0
+
+    term1 = np.full_like(mean_d, np.nan, dtype=float)
+    np.divide(var_n, mean_d**2, out=term1, where=mean_ne_zero_mask)
+
+    term2 = np.full_like(mean_d, np.nan, dtype=float)
+    np.divide(mean_n**2 * var_d, mean_d**4, out=term2, where=mean_ne_zero_mask)
+
+    term3 = np.full_like(mean_d, np.nan, dtype=float)
+    np.divide(2 * mean_n * cov, mean_d**3, out=term3, where=mean_ne_zero_mask)
 
     res_var_raw = term1 + term2 - term3
     res_var = np.where((res_var_raw > -1e-9) & (res_var_raw < 0), 0, res_var_raw)
@@ -207,29 +230,30 @@ def ratio_metric_test(
     metric_value_2: float | np.ndarray,
     variance_2: float | np.ndarray,
 ) -> TestResult:
-    """
-    Statistical test for comparing two ratio metrics.
+    """Performs a statistical test for comparing two ratio metrics.
 
-    This function performs a z-test to compare two ratio metrics with known variances.
+    This function conducts a z-test to compare two ratio metrics with known
+    variances, which is suitable for large sample sizes.
 
     Args:
-        metric_value_1 (float | np.ndarray): Value of the first ratio metric. Cannot be zero.
-        variance_1 (float | np.ndarray): Variance of the first ratio metric. Must be non-negative.
-        metric_value_2 (float | np.ndarray): Value of the second ratio metric.
-        variance_2 (float | np.ndarray): Variance of the second ratio metric. Must be non-negative.
+        metric_value_1: Value of the first ratio metric.
+        variance_1: Variance of the first ratio metric. Must be non-negative.
+        metric_value_2: Value of the second ratio metric.
+        variance_2: Variance of the second ratio metric. Must be non-negative.
 
     Returns:
-        TestResult: Named tuple containing:
-            - statistic: The z-statistic
-            - p_value: Two-tailed p-value
-            - ci: Confidence interval (ConfidenceInterval named tuple with lower and upper bounds)
-            - diff_abs: Absolute difference between metrics (metric_2 - metric_1)
-            - diff_ratio: Relative difference between metrics ((metric_2 - metric_1) / metric_1)
+        A `TestResult` named tuple with the following fields:
+        - statistic: The calculated z-statistic.
+        - p_value: The two-tailed p-value.
+        - ci: A `ConfidenceInterval` with lower and upper bounds.
+        - diff_abs: The absolute difference between metrics.
+        - diff_ratio: The relative difference between metrics.
 
     Raises:
-        ValueError: If any variance is negative or if metric_value_1 is zero
-        TypeError: If arguments are not all of the same type (all float or all np.ndarray)
-        ValueError: If np.ndarray arguments have different shapes
+        ValueError: If any variance is negative.
+        TypeError: If arguments are not of the same type (all float or all
+            np.ndarray).
+        ValueError: If np.ndarray arguments have different shapes.
     """
     args_list = [metric_value_1, variance_1, metric_value_2, variance_2]
     ValidationUtils.check_all_args_is_digit_or_ndarray(args_list)
@@ -242,17 +266,16 @@ def ratio_metric_test(
     diff_var = variance_2 + variance_1
     diff_se = np.sqrt(diff_var)
 
-    # Use np.isclose for robust floating point comparison to avoid division by zero
-    is_se_zero = np.isclose(diff_se, 0)
-    is_diff_zero = np.isclose(diff_metric, 0)
+    # avoiding division by zero
+    eps = 1e-12
+    is_se_zero = np.isclose(diff_se, 0.0, atol=eps)
+    is_diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
 
-    # Calculate z_stat safely
-    # Set z_stat to 0 if standard error is zero and difference is zero,
-    # to +/- infinity if standard error is zero but difference is not,
-    # and to the calculated value otherwise.
     z_stat = np.divide(diff_metric, diff_se, out=np.zeros_like(diff_metric, dtype=float), where=~is_se_zero)
-    z_stat_if_se_zero = np.where(is_diff_zero, 0.0, np.inf * np.sign(diff_metric))
-    z_stat = np.where(is_se_zero, z_stat_if_se_zero, z_stat)
+    need_inf = is_se_zero & ~is_diff_zero
+    if np.any(need_inf):
+        inf_val = np.sign(diff_metric) * np.inf
+        z_stat = np.where(need_inf, inf_val, z_stat)
 
     p_value = 2 * (1 - norm.cdf(abs(z_stat)))
 
@@ -260,12 +283,28 @@ def ratio_metric_test(
     ci_upper = diff_metric + diff_se * NORM_PPF_ALPHA_TWO_SIDED[0.05]
     ci = ConfidenceInterval(ci_lower, ci_upper)
 
+    diff_ratio = np.empty_like(diff_metric, dtype=float)
+
+    m1_zero = np.isclose(metric_value_1, 0.0, atol=eps)
+    diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
+
+    np.divide(diff_metric, metric_value_1, out=diff_ratio, where=~m1_zero)
+
+    mask_zero = m1_zero & diff_zero
+    diff_ratio[mask_zero] = 0.0
+
+    # zero baseline and non-zero difference -> ±inf (without inf*0, because mask excludes diff==0)
+    mask_inf = m1_zero & ~diff_zero
+    if np.any(mask_inf):
+        inf_val = np.sign(diff_metric) * np.inf
+        diff_ratio = np.where(mask_inf, inf_val, diff_ratio)
+
     return TestResult(
         statistic=z_stat,
         p_value=p_value,
         ci=ci,
         diff_abs=diff_metric,
-        diff_ratio=diff_metric / metric_value_1,
+        diff_ratio=diff_ratio,
     )
 
 
@@ -285,45 +324,40 @@ def delta_test_ratio_metric(
     cov_2: float | np.ndarray,
     n_2: float | int | np.ndarray,
 ) -> TestResult:
-    """
-    Perform a statistical test to compare two ratio metrics using the delta method.
+    """Performs a test to compare two ratio metrics using the delta method.
 
-    This function first calculates the variance of two ratio metrics using the delta method,
-    then performs a statistical test to compare them.
+    This function first calculates the variance of each ratio metric using the
+    delta method and then performs a z-test to compare them.
 
     Args:
-        metric_1 (float | np.ndarray): Value of the first ratio metric.
-        mean_n_1 (float | np.ndarray): Mean of the numerator for the first ratio.
-        var_n_1 (float | np.ndarray): Variance of the numerator for the first ratio.
-            Must be non-negative.
-        mean_d_1 (float | np.ndarray): Mean of the denominator for the first ratio. Cannot be zero.
-        var_d_1 (float | np.ndarray): Variance of the denominator for the first ratio.
-            Must be non-negative.
-        cov_1 (float | np.ndarray): Covariance between numerator and denominator for the ratio 1.
-        n_1 (float | int | np.ndarray): Sample size for the first ratio. Must be positive.
-        metric_2 (float | np.ndarray): Value of the second ratio metric.
-        mean_n_2 (float | np.ndarray): Mean of the numerator for the second ratio.
-        var_n_2 (float | np.ndarray): Variance of the numerator for the second ratio.
-            Must be non-negative.
-        mean_d_2 (float | np.ndarray): Mean of the denominator for the second ratio. Cannot be zero.
-        var_d_2 (float | np.ndarray): Variance of the denominator for the second ratio.
-            Must be non-negative.
-        cov_2 (float | np.ndarray): Covariance between numerator and denominator for the ratio 2.
-        n_2 (float | int | np.ndarray): Sample size for the second ratio. Must be positive.
+        metric_1: Value of the first ratio metric.
+        mean_n_1: Mean of the numerator for the first ratio.
+        var_n_1: Variance of the numerator for the first ratio.
+        mean_d_1: Mean of the denominator for the first ratio.
+        var_d_1: Variance of the denominator for the first ratio.
+        cov_1: Covariance for the first ratio.
+        n_1: Sample size for the first ratio.
+        metric_2: Value of the second ratio metric.
+        mean_n_2: Mean of the numerator for the second ratio.
+        var_n_2: Variance of the numerator for the second ratio.
+        mean_d_2: Mean of the denominator for the second ratio.
+        var_d_2: Variance of the denominator for the second ratio.
+        cov_2: Covariance for the second ratio.
+        n_2: Sample size for the second ratio.
 
     Returns:
-        TestResult: Named tuple containing:
-            - statistic: The z-statistic
-            - p_value: Two-tailed p-value
-            - ci: Confidence interval (ConfidenceInterval named tuple with lower and upper bounds)
-            - diff_abs: Absolute difference between metrics (metric_2 - metric_1)
-            - diff_ratio: Relative difference between metrics ((metric_2 - metric_1) / metric_1)
+        A `TestResult` named tuple with the test results.
+        - statistic: The calculated z-statistic.
+        - p_value: The two-tailed p-value.
+        - ci: A `ConfidenceInterval` with lower and upper bounds.
+        - diff_abs: The absolute difference between metrics.
+        - diff_ratio: The relative difference between metrics.
 
     Raises:
-        ValueError: If any variance is negative, any sample size is not positive,
-            or any denominator mean is zero
-        TypeError: If arguments are not all of the same type (all float or all np.ndarray)
-        ValueError: If np.ndarray arguments have different shapes
+        ValueError: If variances are negative, sample sizes are not positive,
+            or denominator means are zero.
+        TypeError: If arguments are not of the same type.
+        ValueError: If np.ndarray arguments have different shapes.
     """
     args_list = [
         metric_1,
@@ -374,26 +408,21 @@ def sample_size_proportion_z_test(
     alpha: float,
     beta: float,
 ) -> np.ndarray | float:
-    """
-    Calculate the sample size for a proportion z-test.
+    """Calculates the required sample size for a two-sample proportion z-test.
 
     Args:
-        p1 (float | np.ndarray): Reference proportion. Must be in range (0, 1).
-        effect_size (float | np.ndarray): Relative difference between proportions.
-            For example, effect_size=0.2 means detecting a 20% difference from p1.
-        alpha (float): Significance level. Must be one of the predefined values in
-            NORM_PPF_ALPHA_TWO_SIDED.
-        beta (float): Type 2 error rate. Must be one of the predefined values in
-            NORM_PPF_BETA.
+        p1: Baseline proportion in the control group. Must be in (0, 1).
+        effect_size: The relative effect size to detect (e.g., 0.1 for a 10%
+            increase).
+        alpha: The significance level (Type I error rate).
+        beta: The Type II error rate (1 - power).
 
     Returns:
-        np.ndarray | float: Required sample size for each group. Returns a float for scalar inputs
-            and a numpy array for array inputs.
+        The required sample size for each group.
 
     Raises:
-        ValueError: If alpha or beta is not one of the predefined values
-        ValueError: If p1 is not in range (0, 1)
-        ValueError: If the resulting p2 (p1 + p1*effect_size) is not in range (0, 1)
+        ValueError: If alpha or beta are not among predefined values, or if p1
+            or the resulting p2 are not in the (0, 1) range.
     """
     if alpha not in NORM_PPF_ALPHA_TWO_SIDED:
         raise ValueError(
@@ -425,33 +454,24 @@ def sample_size_t_test(
     alpha: float = 0.05,
     beta: float = 0.2,
 ) -> np.ndarray | float:
-    """
-    Calculate the required sample size for a two-sample t-test with equal variances.
+    """Calculates the required sample size for a two-sample t-test.
+
+    This function assumes equal variances between the two groups.
 
     Args:
-        avg1 (float | np.ndarray): Mean of the first group (control group).
-        var (float | np.ndarray): Variance of the data (assumed equal in both groups).
-            Must be non-negative.
-        effect_size (float | np.ndarray): Relative difference to detect,
-            expressed as a proportion of avg1.
-            For example, effect_size=0.2 means detecting a 20% difference from avg1.
-            Cannot be zero.
-        alpha (float, optional): Significance level. Must be one of the predefined values in
-            NORM_PPF_ALPHA_TWO_SIDED.
-            Defaults to 0.05.
-        beta (float, optional): Type II error rate. Must be one of the predefined values in
-            NORM_PPF_BETA.
-            Defaults to 0.2 (meaning power = 0.8).
+        avg1: Mean of the control group.
+        var: Pooled variance of the two groups. Must be non-negative.
+        effect_size: The relative effect size to detect (e.g., 0.1 for a 10%
+            increase from avg1). Cannot be zero.
+        alpha: The significance level (Type I error rate).
+        beta: The Type II error rate (1 - power).
 
     Returns:
-        np.ndarray | float: Required sample size for each group. Returns a float for scalar inputs
-            and a numpy array for array inputs.
+        The required sample size for each group.
 
     Raises:
-        ValueError: If effect_size is zero
-        ValueError: If alpha or beta is not one of the predefined values
-        ValueError: If var is negative
-        ValueError: If input types are inconsistent (mixing float and np.ndarray)
+        ValueError: If effect_size is zero, var is negative, alpha or beta are
+            not among predefined values, or if input types are inconsistent.
     """
     if np.any(effect_size == 0):
         raise ValueError("Effect size cannot be zero")
@@ -541,38 +561,27 @@ def sample_size_ratio_metric(
     alpha: float = 0.05,
     beta: float = 0.2,
 ) -> np.ndarray | float:
-    """
-    Calculate the required sample size for a ratio metric test using the delta method.
+    """Calculates sample size for a ratio metric test using the delta method.
 
-    This function calculates the sample size needed to detect a given effect size in a ratio metric
-    with specified statistical power and significance level.
+    This determines the sample size needed to detect a specified relative
+    effect size in a ratio of two variables.
 
     Args:
-        mean_n (float | np.ndarray): Mean of the numerator.
-        var_n (float | np.ndarray): Variance of the numerator. Must be non-negative.
-        mean_d (float | np.ndarray): Mean of the denominator. Cannot be zero.
-        var_d (float | np.ndarray): Variance of the denominator. Must be non-negative.
-        cov (float | np.ndarray): Covariance between numerator and denominator.
-        effect_size (float | np.ndarray): Relative difference to detect,
-            expressed as a proportion of the ratio.
-            For example, effect_size=0.2 means detecting a 20% difference in the ratio.
-            Cannot be zero.
-        alpha (float, optional): Significance level. Must be one of the predefined values
-            in NORM_PPF_ALPHA_TWO_SIDED.
-            Defaults to 0.05.
-        beta (float, optional): Type II error rate. Must be one of the predefined values
-        in NORM_PPF_BETA.
-            Defaults to 0.2 (meaning power = 0.8).
+        mean_n: Mean of the numerator.
+        var_n: Variance of the numerator. Must be non-negative.
+        mean_d: Mean of the denominator. Cannot be zero.
+        var_d: Variance of the denominator. Must be non-negative.
+        cov: Covariance between the numerator and denominator.
+        effect_size: The relative effect size to detect. Cannot be zero.
+        alpha: The significance level (Type I error rate).
+        beta: The Type II error rate (1 - power).
 
     Returns:
-        np.ndarray | float: Required sample size. Returns a float for scalar inputs
-            and a numpy array for array inputs.
+        The required sample size for each group.
 
     Raises:
-        ValueError: If effect_size is zero
-        ValueError: If mean_d is zero
-        ValueError: If any variance is negative
-        ValueError: If alpha or beta is not one of the predefined values
+        ValueError: If effect_size or mean_d is zero, any variance is negative,
+            or alpha or beta are not among predefined values.
     """
     if np.any(effect_size == 0):
         raise ValueError("Effect size cannot be zero")
