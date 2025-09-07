@@ -85,9 +85,12 @@ def ttest_welch(
     df_numerator = (var_2 / n_2 + var_1 / n_1) ** 2
     df_denominator = (var_2**2) / (n_2**2 * (n_2 - 1)) + (var_1**2) / (n_1**2 * (n_1 - 1))
 
-    degrees_of_freedom = np.divide(df_numerator, df_denominator,
-                                  out=np.full_like(df_numerator, np.nan, dtype=float),
-                                  where=df_denominator != 0)
+    degrees_of_freedom = np.divide(
+        df_numerator,
+        df_denominator,
+        out=np.full_like(df_numerator, np.nan, dtype=float),
+        where=df_denominator != 0,
+    )
 
     p_value = 2 * (1 - stdtr(degrees_of_freedom, abs(t_stat)))
 
@@ -151,7 +154,10 @@ def ztest_proportion(
     z_diff = p_2 - p_1
     p_pooled = (p_1 * n_1 + p_2 * n_2) / (n_1 + n_2)
     z_denominator = (p_pooled * (1 - p_pooled) * (1 / n_1 + 1 / n_2)) ** (1 / 2)
-    z_stat = z_diff / z_denominator
+
+    z_stat = np.zeros_like(z_diff, dtype=float)
+    np.divide(z_diff, z_denominator, out=z_stat, where=(z_denominator != 0))
+
     p_value = 2 * (1 - ndtr(abs(z_stat)))
     se = (p_1 * (1 - p_1) / n_1 + p_2 * (1 - p_2) / n_2) ** 0.5
 
@@ -160,7 +166,8 @@ def ztest_proportion(
     ci = ConfidenceInterval(ci_lower, ci_upper)
 
     # Handle division by zero for diff_ratio
-    diff_ratio = np.where(p_1 != 0, z_diff / p_1, np.inf)
+    diff_ratio = np.full_like(z_diff, np.inf, dtype=float)
+    np.divide(z_diff, p_1, out=diff_ratio, where=(p_1 != 0))
 
     return TestResult(statistic=z_stat, p_value=p_value, ci=ci, diff_abs=z_diff, diff_ratio=diff_ratio)
 
@@ -207,7 +214,7 @@ def ratio_metric_sample_variance(
     np.divide(var_n, mean_d**2, out=term1, where=mean_ne_zero_mask)
 
     term2 = np.full_like(mean_d, np.nan, dtype=float)
-    np.divide(mean_n**2 * var_d,  mean_d**4, out=term2, where=mean_ne_zero_mask)
+    np.divide(mean_n**2 * var_d, mean_d**4, out=term2, where=mean_ne_zero_mask)
 
     term3 = np.full_like(mean_d, np.nan, dtype=float)
     np.divide(2 * mean_n * cov, mean_d**3, out=term3, where=mean_ne_zero_mask)
@@ -264,12 +271,11 @@ def ratio_metric_test(
     is_se_zero = np.isclose(diff_se, 0.0, atol=eps)
     is_diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
 
-
     z_stat = np.divide(diff_metric, diff_se, out=np.zeros_like(diff_metric, dtype=float), where=~is_se_zero)
     need_inf = is_se_zero & ~is_diff_zero
     if np.any(need_inf):
-        z_stat = z_stat.astype(float, copy=True)
-        z_stat[need_inf] = np.sign(diff_metric[need_inf]) * np.inf
+        inf_val = np.sign(diff_metric) * np.inf
+        z_stat = np.where(need_inf, inf_val, z_stat)
 
     p_value = 2 * (1 - norm.cdf(abs(z_stat)))
 
@@ -279,7 +285,7 @@ def ratio_metric_test(
 
     diff_ratio = np.empty_like(diff_metric, dtype=float)
 
-    m1_zero   = np.isclose(metric_value_1, 0.0, atol=eps)
+    m1_zero = np.isclose(metric_value_1, 0.0, atol=eps)
     diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
 
     np.divide(diff_metric, metric_value_1, out=diff_ratio, where=~m1_zero)
@@ -290,7 +296,8 @@ def ratio_metric_test(
     # zero baseline and non-zero difference -> ±inf (without inf*0, because mask excludes diff==0)
     mask_inf = m1_zero & ~diff_zero
     if np.any(mask_inf):
-        diff_ratio[mask_inf] = np.sign(diff_metric[mask_inf]) * np.inf
+        inf_val = np.sign(diff_metric) * np.inf
+        diff_ratio = np.where(mask_inf, inf_val, diff_ratio)
 
     return TestResult(
         statistic=z_stat,

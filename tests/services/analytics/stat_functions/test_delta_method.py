@@ -1,27 +1,15 @@
-import math
 from collections.abc import Callable
 
 import numpy as np
 import pytest
-from scipy.stats import norm, ttest_ind  # type: ignore
-from statsmodels.stats.power import TTestIndPower  # type: ignore
-from statsmodels.stats.proportion import (  # type: ignore
-    confint_proportions_2indep,  # type: ignore
-    proportions_ztest,  # type: ignore
-    samplesize_proportions_2indep_onetail,  # type: ignore
-)  # type: ignore
+from scipy.stats import norm  # type: ignore
 
 from src.services.analytics.stat_functions import (
     delta_test_ratio_metric,
     ratio_metric_sample_variance,
     ratio_metric_test,
-    sample_size_proportion_z_test,
     sample_size_ratio_metric,
-    sample_size_t_test,
-    ttest_welch,
-    ztest_proportion,
 )
-
 
 
 # -------------------------------- TESTING RATIO FUNCTION --------------------------------
@@ -91,7 +79,7 @@ def generate_stats_by_ratio_samples(numerator_1, denominator_1, numerator_2, den
     ],
 )
 def test_ratio_metric_test_trivial(
-        generate_samples_ratio, samples_params_list, sample_size, seed, pval_check
+    generate_samples_ratio, samples_params_list, sample_size, seed, pval_check
 ):
     sample_1_params, sample_2_params = samples_params_list
 
@@ -114,7 +102,7 @@ def test_ratio_metric_test_trivial(
     [(5000, (120, 20, 50, 30, 0.1), 2000, 122), (10000, (120, 20, 50, 30, 0.1), 20000, None)],
 )
 def test_ratio_metric_test_reliability_norm(
-        generate_samples_ratio, n_simulations, samples_params, sample_size, seed
+    generate_samples_ratio, n_simulations, samples_params, sample_size, seed
 ):
     pvals = []
     for _ in range(n_simulations):
@@ -144,7 +132,7 @@ def test_ratio_metric_test_reliability_norm(
     [(200000, (1 / 2, 1 / 20, 0.85), 5000, 120), (10000, (1 / 2, 1 / 10, 0.4), 20000, None)],
 )
 def test_ratio_metric_test_reliability_expon(
-        generate_samples_ratio_expon, n_simulations, samples_params, sample_size, seed
+    generate_samples_ratio_expon, n_simulations, samples_params, sample_size, seed
 ):
     pvals = []
     for _ in range(n_simulations):
@@ -168,40 +156,31 @@ def test_ratio_metric_test_reliability_expon(
         assert threshold * 0.85 <= share <= threshold * 1.15
 
 
-#------------------------------CORNER CASE---------------------------------
+# ------------------------------CORNER CASE---------------------------------
+
 
 def test_ratio_metric_mean_d_zero_no_warnings(recwarn):
     """
-    Демонстрация предупреждений в функции ratio_metric_sample_variance.
+    Test of warnings in the ratio_metric_sample_variance function.
     """
-
-    # Сценарий: Среднее знаменателя (mean_d) равно нулю.
-    # Все три члена формулы (term1, term2, term3) содержат mean_d в знаменателе,
-    # что приводит к делению на ноль.
-
-    variance = ratio_metric_sample_variance(
+    var = ratio_metric_sample_variance(
         mean_n=np.array([50]),
         var_n=np.array([10]),
         mean_d=np.array([0]),
         var_d=np.array([5]),
         cov=np.array([2]),
     )
-
-    for i, v in enumerate(recwarn):
-        print(f"#{i}", v)
-
+    assert np.isnan(var)
     assert len(recwarn) == 0
 
-def test_ratio_metric_test_zero_variances_no_warnings(recwarn):
 
+def test_ratio_metric_test_zero_variances_no_warnings(recwarn):
     test_result = ratio_metric_test(
         metric_value_1=np.array([10]),
         variance_1=np.array([0]),
         metric_value_2=np.array([10]),
         variance_2=np.array([0]),
     )
-    print(recwarn)
-    print(test_result)
 
     assert len(recwarn) == 0
     assert test_result.p_value == 1.0
@@ -209,7 +188,6 @@ def test_ratio_metric_test_zero_variances_no_warnings(recwarn):
 
 
 def test_ratio_metric_test_zero_values_no_warnings(recwarn):
-
     test_result = ratio_metric_test(
         metric_value_1=np.array([0]),
         variance_1=np.array([5]),
@@ -221,16 +199,15 @@ def test_ratio_metric_test_zero_values_no_warnings(recwarn):
     assert np.isinf(test_result.diff_ratio)
 
 
-
-#------------------------------SAMPLE SIZE---------------------------------
+# ------------------------------SAMPLE SIZE---------------------------------
 @pytest.mark.parametrize(
     "mean_n, var_n, mean_d, var_d, cov, beta",
     [(100.0, 100.0, 20, 200, 0.5, 0.2), (1, 1, 2, 2, 0.9999, 0.05), (1, 1, 2, 2, 0, 0.05)],
 )
 def test_sample_size_delta_test_ratio_metric_reliability(mean_n, var_n, mean_d, var_d, cov, beta):
-    # Test that the sample size is correct for a given effect size and alpha
-    # I.E. that the p-value is less than alpha if we use the computed sample size.
-    # WARNING: this test bases on delta_test_ratio_metric (it's reliability is tested above)
+    """
+    Test of reliability of the sample_size_ratio_metric function.
+    """
     for effect_size in [0.001, 0.01, 0.03, 0.1, 0.2, 0.5]:
         for alpha in [0.01, 0.05, 0.1]:
             our_sample_size = sample_size_ratio_metric(
@@ -252,7 +229,7 @@ def test_sample_size_delta_test_ratio_metric_reliability(mean_n, var_n, mean_d, 
                 var_d,
                 cov,
                 our_sample_size,
-                ).p_value
+            ).p_value
             assert pval < alpha
 
 

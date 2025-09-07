@@ -3,18 +3,13 @@ from collections.abc import Callable
 
 import numpy as np
 import pytest
-from scipy.stats import norm, ttest_ind  # type: ignore
-from statsmodels.stats.power import TTestIndPower  # type: ignore
 from statsmodels.stats.proportion import (  # type: ignore
     confint_proportions_2indep,  # type: ignore
     proportions_ztest,  # type: ignore
     samplesize_proportions_2indep_onetail,  # type: ignore
 )  # type: ignore
 
-from src.services.analytics.stat_functions import (
-    ztest_proportion,
-    sample_size_proportion_z_test
-)
+from src.services.analytics.stat_functions import sample_size_proportion_z_test, ztest_proportion
 
 
 @pytest.fixture(
@@ -79,11 +74,32 @@ def test_ztest_proportion_vs_proportions_ztest(generate_two_samples_ztest):
         sttsmdls_ci_lower, my_ztest_proportion_result.ci.lower, abs_tol=0.0001, rel_tol=0.0001
     )
 
-#------------------------------CORNER CASE---------------------------------
+
+# ------------------------------CORNER CASE---------------------------------
+def test_z_test_zero_proportions_no_warnings(recwarn):
+    """Test of warnings in the ztest_proportion function."""
+
+    test_result = ztest_proportion(
+        p_1=np.array([0]), n_1=np.array([100]), p_2=np.array([0]), n_2=np.array([100])
+    )
+
+    assert len(recwarn) == 0
+    assert np.isinf(test_result.diff_ratio)
+    assert np.all(test_result.p_value == 1)
 
 
+def test_z_test_zero_zer_control_proportion_no_warnings(recwarn):
+    """Test of warnings in the ztest_proportion function."""
 
-#------------------------------SAMPLE SIZE---------------------------------
+    test_result = ztest_proportion(
+        p_1=np.array([0]), n_1=np.array([100]), p_2=np.array([0.1]), n_2=np.array([100])
+    )
+    assert len(recwarn) == 0
+    assert np.isinf(test_result.diff_ratio)
+    assert test_result.p_value < 0.01
+
+
+# ------------------------------SAMPLE SIZE---------------------------------
 @pytest.mark.parametrize(
     "p1, effect_size, alpha, beta",
     [
@@ -97,22 +113,18 @@ def test_ztest_proportion_vs_proportions_ztest(generate_two_samples_ztest):
 )
 def test_sample_size_proportion_z_test_basic(p1, effect_size, alpha, beta):
     """Test sample_size_proportion_z_test function with basic test cases."""
-    # Calculate sample size using our function
     n_required = sample_size_proportion_z_test(p1, effect_size, alpha, beta)
 
-    # Calculate expected difference
     p2 = p1 + (p1 * effect_size)
     diff = p2 - p1
 
-    # Calculate sample size using statsmodels
     power = 1 - beta
     n_expected = samplesize_proportions_2indep_onetail(
         diff=diff, prop2=p1, power=power, alpha=alpha, alternative="two-sided"
     )
 
-    # Allow for small differences due to rounding and different calculation methods
-    # Sample size calculations can vary slightly between implementations
     assert abs(n_required - n_expected) <= max(3, 0.005 * n_expected)
+
 
 def test_sample_size_proportion_z_test_value_errors():
     """Test that sample_size_proportion_z_test raises appropriate ValueErrors for invalid inputs."""
@@ -124,6 +136,7 @@ def test_sample_size_proportion_z_test_value_errors():
     with pytest.raises(ValueError, match="p2 values must be in range"):
         sample_size_proportion_z_test(0.5, 1.1, 0.05, 0.2)  # p2 > 1
 
+
 def test_sample_size_proportion_z_test_with_arrays():
     """Test that sample_size_proportion_z_test works correctly with array inputs."""
     # Create test arrays
@@ -133,14 +146,11 @@ def test_sample_size_proportion_z_test_with_arrays():
     beta = 0.2
     power = 1 - beta
 
-    # Calculate p2 and diff for statsmodels
     p2_array = p1_array + (p1_array * effect_size_array)
     diff_array = p2_array - p1_array
 
-    # Run our function with array inputs
     our_sample_sizes = sample_size_proportion_z_test(p1_array, effect_size_array, alpha, beta)
 
-    # Calculate expected sample sizes using statsmodels
     expected_sample_sizes = []
     for p1, diff in zip(p1_array, diff_array, strict=False):
         n_expected = samplesize_proportions_2indep_onetail(
@@ -150,11 +160,8 @@ def test_sample_size_proportion_z_test_with_arrays():
 
     expected_sample_sizes = np.array(expected_sample_sizes)
 
-    # Compare array calculation results with expected values
     for i in range(len(p1_array)):
         sample_size_diff = abs(our_sample_sizes[i] - expected_sample_sizes[i])
         assert sample_size_diff <= max(3, 0.005 * expected_sample_sizes[i]), (
             f"Values differ at index {i}: ours={our_sample_sizes[i]}, expected={expected_sample_sizes[i]}"
         )
-
-
