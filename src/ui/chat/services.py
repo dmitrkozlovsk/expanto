@@ -9,7 +9,7 @@ import httpx
 
 from src.settings import AssistantServiceCfg
 from src.ui.chat.schemas import (
-    AssistantResponse,
+    AssistResponse,
     ChatRequest,
     ChatResponse,
     ChatState,
@@ -53,8 +53,8 @@ class HttpAssistantService:
                 method_url_string, json=json_message, headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
-            data = response.json()  # response = AssistantResponse
-            assistant_response = AssistantResponse(**data)
+            data = response.json()  # response = AssistResponse
+            assistant_response = AssistResponse(**data)
             return InvokeResult(assistant_response=assistant_response, success=True, error=None)
         except httpx.TimeoutException:
             return InvokeResult(
@@ -83,7 +83,7 @@ class ChatController:
         self.assistant_service = assistant_service
 
     @staticmethod
-    def decompose_output(invoke_result: AssistantResponse) -> tuple[str | None, Any]:
+    def decompose_output(invoke_result: AssistResponse) -> tuple[str | None, Any]:
         """Decompose assistant response output into message and supplement data.
 
         Args:
@@ -133,7 +133,7 @@ class ChatController:
             chat_response = self._create_error_response(error=invoke_result.error)
         return chat_response
 
-    def _create_success_response(self, assistant_response: AssistantResponse) -> ChatResponse:
+    def _create_success_response(self, assistant_response: AssistResponse) -> ChatResponse:
         """Create a successful chat response."""
         chat_msg, supplement = self.decompose_output(assistant_response)
         return ChatResponse(
@@ -141,6 +141,7 @@ class ChatController:
             supplement=supplement,
             usage=assistant_response.usage,
             success=True,
+            thinking=assistant_response.thinking,
         )
 
     def _create_error_response(self, error: str | None) -> ChatResponse:
@@ -151,4 +152,5 @@ class ChatController:
             success=False,
             usage=None,
             error_msg=error or "Unknown error occurred",
+            thinking=None,
         )

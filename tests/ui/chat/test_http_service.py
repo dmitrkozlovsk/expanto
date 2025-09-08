@@ -35,9 +35,10 @@ def test_invoke_success_str_output(mock_post, service, chat_request):
     mock_post.return_value = Response(
         status_code=200,
         request=Request("POST", "http://testserver/invoke"),
-        content=b'{"output": "hi", "usage": {"total_tokens": 12}}',
+        content=b'{"output": "hi", "usage": {"total_tokens": 12}, "thinking": null}',
     )
-    result = service.invoke(chat_request)
+    result = service.invoke(chat_request)  # InvokeResult
+    print(result)
     assert result.success
     assert result.assistant_response.output == "hi"
     assert result.assistant_response.usage.total_tokens == 12

@@ -78,7 +78,10 @@ class Chat:
                     ChatStateManager.update_state(response)
                 except Exception as e:
                     ChatStateManager.add_message(
-                        message_type=MessageType.ERROR, role=Role.ASSISTANT, content=str(e)
+                        message_type=MessageType.ERROR,
+                        role=Role.ASSISTANT,
+                        content=str(e),
+                        thinking=None,
                     )
                 finally:  # prevent eternal loop
                     st.rerun()

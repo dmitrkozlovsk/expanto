@@ -99,6 +99,7 @@ class OrchestrationResult:
     output: AgentsOutput
     message_history: list[Any]
     usage: Usage
+    thinking: str | None
 
 
 @dataclass
@@ -110,6 +111,7 @@ class AssistantResponse:
 
     output: AgentsOutput
     usage: Usage
+    thinking: str | None
 
 
 @dataclass

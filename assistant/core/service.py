@@ -55,4 +55,4 @@ class AssistantService:
         chat_history.message_history = result.message_history
         chat_history.usage += result.usage
 
-        return AssistantResponse(output=result.output, usage=chat_history.usage)
+        return AssistantResponse(output=result.output, usage=chat_history.usage, thinking=result.thinking)

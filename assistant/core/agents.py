@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 from pydantic_ai.common_tools.tavily import tavily_search_tool
+from pydantic_ai.messages import ModelMessage, ModelResponse, ThinkingPart
 
 from assistant.core.models import ModelFactory
 from assistant.core.schemas import Deps, ExperimentDefinition, OrchestrationResult, RouterOutput
@@ -240,9 +241,10 @@ class AgentOrchestrator:
                 output=route_response.output.follow_up_questions,
                 message_history=message_history,
                 usage=route_response.usage(),
+                thinking=None,
             )
 
-        selected_agent = self.agent_manager.get_agent(route_output.route_id)
+        selected_agent = self.agent_manager.get_agent(route_id=route_output.route_id)
         logger.info(f"Router decision: {route_output.route_id} → Selected: {selected_agent.name}")
         try:
             response = await selected_agent.run(user_input, deps=deps, message_history=message_history)
@@ -252,8 +254,25 @@ class AgentOrchestrator:
             multipurpose_agent = self.agent_manager.get_agent("multipurpose")
             response = await multipurpose_agent.run(user_input, deps=deps, message_history=message_history)
 
+        # Extract thinking parts
+        def extract_thinking_parts(new_messages: list[ModelMessage]) -> str | None:
+            model_thinking_parts = []
+            try:
+                for message in response.new_messages():
+                    if isinstance(message, ModelResponse):
+                        for part in message.parts:
+                            if isinstance(part, ThinkingPart):
+                                model_thinking_parts.append(part.content)
+            except Exception:
+                return None
+            return "\n".join(model_thinking_parts) if model_thinking_parts else None
+
+        response_thinking = extract_thinking_parts(response.new_messages())
         cleaned_messages = drop_empty_messages(response.all_messages())
 
         return OrchestrationResult(
-            output=response.output, message_history=cleaned_messages, usage=response.usage()
+            output=response.output,
+            message_history=cleaned_messages,
+            thinking=response_thinking,
+            usage=response.usage(),
         )

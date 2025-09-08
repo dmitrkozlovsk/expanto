@@ -1,6 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -8,9 +9,13 @@ import pytest
 from pydantic_ai import Agent, capture_run_messages, models
 from pydantic_ai.messages import (
     ModelRequest,
+    ModelResponse,
+    TextPart,
+    ThinkingPart,
     UserPromptPart,
 )
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.result import StreamedRunResult
 
 from assistant.core.agents import AgentManager, AgentOrchestrator
 from assistant.core.models import ModelFactory
@@ -235,7 +240,7 @@ async def test_agent_orchestrator_low_confidence_returns_follow_up_questions():
     ],
 )
 @pytest.mark.anyio
-async def test_orchestrator_routs(route_id, output):
+async def test_orchestrator_routes(route_id, output):
     """Test that orchestrator routes to correct agents based on route_id."""
     mock_router_output = RouterOutput(route_id=route_id, confidence=0.9, follow_up_questions=None)
 
@@ -282,4 +287,55 @@ async def test_orchestrator_routs(route_id, output):
         assert result.output == output
 
 
-# TODO: FINISHED TESTS WITH TOOLS
+@pytest.mark.anyio
+async def test_agent_orchestrator_extracts_thinking_part():
+    """Test that AgentOrchestrator correctly extracts and returns the thinking part."""
+
+    mock_thinking_content = "This is the thinking process."
+    mock_output_content = "This is the final answer."
+    mock_user_input = "some question"
+
+    mock_run_result = MagicMock(spec=StreamedRunResult)
+    mock_run_result.output = mock_output_content
+    mock_run_result.usage = MagicMock(return_value=MagicMock())
+
+    mock_new_messages = [
+        ModelRequest(
+            parts=[UserPromptPart(content=mock_user_input)],
+        ),
+        ModelResponse(
+            parts=[ThinkingPart(content=mock_thinking_content), TextPart(content=mock_output_content)]
+        ),
+    ]
+    mock_run_result.new_messages.return_value = mock_new_messages
+    mock_run_result.all_messages.return_value = []
+
+    mock_agent = MagicMock(spec=Agent)
+    mock_agent.run = AsyncMock(return_value=mock_run_result)
+
+    mock_router_agent = MagicMock(spec=Agent)
+    router_output = RouterOutput(route_id="universal", confidence=0.9, follow_up_questions=None)
+
+    router_run_result = MagicMock(spec=StreamedRunResult)
+    router_run_result.output = router_output
+    router_run_result.usage = MagicMock(return_value=MagicMock())
+    mock_router_agent.run = AsyncMock(return_value=router_run_result)
+
+    mock_agent_manager = MagicMock(spec=AgentManager)
+
+    def get_agent_side_effect(route_id):
+        if route_id == "route":
+            return mock_router_agent
+        return mock_agent
+
+    mock_agent_manager.get_agent.side_effect = get_agent_side_effect
+
+    orchestrator = AgentOrchestrator(agent_manager=mock_agent_manager)
+    deps = SimpleNamespace(app_context="context")
+    result = await orchestrator.process(user_input=mock_user_input, deps=deps, message_history=[])
+
+    assert result.thinking == mock_thinking_content
+    assert result.output == mock_output_content
+    mock_agent_manager.get_agent.assert_any_call(route_id="route")
+    mock_agent_manager.get_agent.assert_any_call(route_id="universal")
+    mock_agent.run.assert_awaited_once_with(mock_user_input, deps=deps, message_history=[])

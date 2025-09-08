@@ -215,15 +215,21 @@ class MessageHistoryContainer:
                         intro_message = "Hello, my dear friend! How can I help you today?"
                         st.markdown(intro_message)
                         ChatStateManager.add_message(
-                            message_type=MessageType.MESSAGE, role=Role.ASSISTANT, content=intro_message
+                            message_type=MessageType.MESSAGE,
+                            role=Role.ASSISTANT,
+                            content=intro_message,
+                            thinking=None,
                         )
                 else:
                     for message in message_history:
                         with st.chat_message(message.role, avatar=AVATARS[message.role]):
+                            if hasattr(message, "thinking") and message.thinking:
+                                st.expander("Thinking Part", expanded=False).markdown(message.thinking)
                             if message.type == MessageType.MESSAGE:
                                 st.markdown(message.content)
                             elif message.type == MessageType.ERROR:
                                 st.error(message.content)
+
                 if is_auto_scroll:
                     chat_scroll()
 
@@ -249,6 +255,9 @@ class UserInputField:
             )
             ChatStateManager.set_future_result(future_result)
             ChatStateManager.add_message(
-                message_type=MessageType.MESSAGE, role=Role.USER, content=user_input
+                message_type=MessageType.MESSAGE,
+                role=Role.USER,
+                content=user_input,
+                thinking=None,
             )
             st.rerun()

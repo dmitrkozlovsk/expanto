@@ -21,6 +21,19 @@ def make_success_response():
         success=True,
         usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
         error_msg=None,
+        thinking="thinking",
+    )
+
+
+def make_error_response():
+    """Create mock successful ChatResponse for testing."""
+    return ChatResponse(
+        chat_msg=None,
+        supplement=None,
+        success=False,
+        usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
+        error_msg="This is an error message.",
+        thinking=None,
     )
 
 
@@ -85,12 +98,36 @@ def test_user_input_success_response(mock_process, app):
     app.chat_input[0].set_value("hello").run()
     mock_process.assert_called_once()
 
-    assert len(app.chat_message) >= 2
-    assert "Hello" in app.chat_message[-1].markdown[0].value
+    assert len(app.chat_message) == 3
     assert app.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
     assert app.session_state["chat_state"].usage.total_tokens == 20
     assert app.session_state["chat_state"].active_user_input is None
     assert app.session_state["chat_state"].future_result is None
+
+    assert "Hello" in app.chat_message[-1].markdown[-1].value
+    assert "Thinking" in app.chat_message[-1].expander[-1].label
+    assert "thinking" in app.chat_message[-1].expander[-1].markdown[0].value
+
+
+@patch("src.ui.chat.chat.ChatController.process_user_input", return_value=make_error_response())
+def test_user_input_error_response_without_thinking_part(mock_process, app):
+    """
+    Test user input processing when an error response is returned, ensuring no thinking part is displayed.
+    """
+    app.chat_input[0].set_value("hello").run()
+    mock_process.assert_called_once()
+
+    # We expect 3 messages: initial assistant msg, user msg, assistant error msg.
+    assert len(app.chat_message) == 3
+
+    last_message = app.chat_message[-1]
+
+    # Check that the last message is an error and contains the correct text
+    assert len(last_message.error) == 1
+    assert "This is an error message." in last_message.error[0].value
+
+    # Check that there is NO expander for the thinking part
+    assert len(last_message.expander) == 0
 
 
 def test_handle_future_response_happy_path(app):
@@ -112,7 +149,7 @@ def test_handle_future_response_happy_path(app):
     app.run()
 
     assert app.session_state["chat_state"].future_result is None
-    assert "Async Hello" in app.chat_message[-1].markdown[0].value
+    assert "Async Hello" in app.chat_message[-1].markdown[-1].value
     assert app.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
     assert app.session_state["chat_state"].usage.total_tokens == 20
     assert len(app.status) == 0

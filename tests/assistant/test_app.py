@@ -42,7 +42,7 @@ def user_payload() -> dict[str, Any]:
 def test_invoke_success(mock_vdb, mock_engine, mock_service, user_payload, dummy_usage, patch_configs):
     """/invoke returns AgentResponse and disposes engine on shutdown."""
 
-    fake_response = AssistantResponse(output="hi!", usage=dummy_usage)
+    fake_response = AssistantResponse(output="hi!", usage=dummy_usage, thinking="thinking")
     # assistant_service is async, so we need an AsyncMock
     mock_service_instance = AsyncMock()
     mock_service_instance.process_request.return_value = fake_response

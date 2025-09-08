@@ -38,18 +38,19 @@ class TokenUsage(BaseModel):
     details: dict[str, int] | None = None
 
 
-class AssistantResponse(BaseModel):
-    """Model for assistant response from the API."""
+class AssistResponse(BaseModel):
+    """Model for assistant service response."""
 
     output: AgentsOutput
     usage: TokenUsage
+    thinking: str | None = None
 
 
 @dataclass
 class InvokeResult:
     """Result container for assistant service invocation."""
 
-    assistant_response: AssistantResponse | None
+    assistant_response: AssistResponse | None
     success: bool
     error: str | None = None
 
@@ -62,6 +63,7 @@ class ChatResponse(BaseModel):
     success: bool
     usage: TokenUsage | None = None
     error_msg: str | None = None
+    thinking: str | None = None
 
 
 # -------------------- STATE SCHEMAS -------------------- #
@@ -88,6 +90,7 @@ class ChatMessage:
     type: MessageType
     role: Role
     content: str
+    thinking: str | None = None
     timestamp: float = field(default_factory=time.time)
 
 
