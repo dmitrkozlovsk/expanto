@@ -5,3 +5,5 @@ primaryColor="#c71313"
 textColor="#0f1450"
 [browser]
 gatherUsageStats = false
+[server]
+showEmailPrompt = false
