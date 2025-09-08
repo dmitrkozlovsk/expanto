@@ -64,17 +64,21 @@ class ChatStateManager:
         return st.session_state.chat_state
 
     @staticmethod
-    def add_message(message_type: MessageType, role: Role, content: str, thinking: str | None) -> None:
+    def add_message(
+        message_type: MessageType, role: Role, content: str, thinking: str | None = None
+    ) -> None:
         """Add a new message to the chat history.
 
         Args:
             message_type: Type of the message (MESSAGE or ERROR).
             role: Role of the message sender (USER or ASSISTANT).
             content: Content of the message.
+            thinking: Optional thinking message.
         """
         state = ChatStateManager.get_or_create_state()
         state.msg_history.append(
-            ChatMessage(type=message_type, role=role, content=content, thinking=thinking))
+            ChatMessage(type=message_type, role=role, content=content, thinking=thinking)
+        )
 
     @staticmethod
     def clear() -> None:
@@ -105,14 +109,17 @@ class ChatStateManager:
                 message_type=MessageType.MESSAGE,
                 role=Role.ASSISTANT,
                 content=chat_response.chat_msg,
-                thinking=chat_response.thinking
+                thinking=chat_response.thinking,
             )
             if chat_response.supplement:
                 state.supplements[chat_response.supplement.__class__.__name__] = chat_response.supplement
             state.usage = chat_response.usage
         elif not chat_response.success and chat_response.error_msg:
             ChatStateManager.add_message(
-                message_type=MessageType.ERROR, role=Role.ASSISTANT, content=chat_response.error_msg
+                message_type=MessageType.ERROR,
+                role=Role.ASSISTANT,
+                content=chat_response.error_msg,
+                thinking=None,
             )
 
     @staticmethod

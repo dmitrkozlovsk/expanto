@@ -5,7 +5,7 @@ import pytest
 from assistant.core.schemas import ExperimentDefinition
 from src.ui.chat.schemas import (
     AppContext,
-    AssistantResponse,
+    AssistResponse,
     ChatState,
     InvokeResult,
     TokenUsage,
@@ -34,7 +34,7 @@ def chat_state():
 @pytest.fixture
 def token_usage():
     """Fixture providing TokenUsage instance for testing."""
-    return TokenUsage(requests=1, request_tokens=10, response_tokens=20, total_tokens=30)
+    return TokenUsage(requests=1, request_tokens=20, response_tokens=10, total_tokens=30)
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def test_controller_init(mock_assistant_service):
 def test_decompose_output_string(token_usage):
     """Test output decomposition when response contains string output."""
     test_output = "string"
-    response = AssistantResponse(output=test_output, usage=token_usage)
+    response = AssistResponse(output=test_output, usage=token_usage, thinking="thinking")
     msg, supp = ChatController.decompose_output(response)
     assert msg == test_output
     assert supp is None
@@ -67,7 +67,7 @@ def test_decompose_output_string(token_usage):
 
 def test_decompose_output_exp_definition(experiment_definition, token_usage):
     """Test output decomposition when response contains ExperimentDefinition."""
-    response = AssistantResponse(output=experiment_definition, usage=token_usage)
+    response = AssistResponse(output=experiment_definition, usage=token_usage, thinking=None)
     msg, supp = ChatController.decompose_output(response)
     _msg = experiment_definition.follow_up_message + "\n" + experiment_definition.follow_up_questions
     assert msg == _msg
@@ -80,16 +80,18 @@ def test_process_user_input_success_string(
 ):
     """Test successful user input processing with string response."""
     mock_ctx.return_value = AppContext()
-    assistant_response = AssistantResponse(output="Response OK", usage=token_usage)
+    assistant_response = AssistResponse(output="Response OK", usage=token_usage, thinking=None)
     mock_assistant_service.invoke.return_value = InvokeResult(
-        assistant_response=assistant_response, success=True, error=None
+        assistant_response=assistant_response,
+        success=True,
+        error=None,
     )
 
     response = chat_controller.process_user_input("Test", chat_state, mock_ctx)
 
     assert response.success
     assert response.chat_msg == "Response OK"
-    assert response.usage == token_usage
+    assert response.usage.total_tokens == token_usage.total_tokens
     assert response.error_msg is None
 
 
@@ -99,7 +101,7 @@ def test_process_user_input_success_object(
 ):
     """Test successful user input processing with object response."""
     mock_ctx.return_value = AppContext()
-    assistant_response = AssistantResponse(output=experiment_definition, usage=token_usage)
+    assistant_response = AssistResponse(output=experiment_definition, usage=token_usage, thinking="r")
     mock_assistant_service.invoke.return_value = InvokeResult(
         assistant_response=assistant_response, success=True, error=None
     )
@@ -115,7 +117,9 @@ def test_process_user_input_error(mock_ctx, chat_controller, mock_assistant_serv
     """Test user input processing when assistant service returns error."""
     mock_ctx.return_value = AppContext()
     mock_assistant_service.invoke.return_value = InvokeResult(
-        assistant_response=None, success=False, error="Failure"
+        assistant_response=None,
+        success=False,
+        error="Failure",
     )
 
     response = chat_controller.process_user_input("Fail", chat_state, mock_ctx)

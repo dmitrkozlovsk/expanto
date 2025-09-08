@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic_ai.usage import Usage
 
-from assistant.core.schemas import Deps, UserData
+from assistant.core.schemas import Deps, OrchestrationResult, UserData
 from assistant.core.service import AssistantResponse, AssistantService
 
 # -------------------------------------- Fixtures --------------------------------------
@@ -14,9 +14,11 @@ from assistant.core.service import AssistantResponse, AssistantService
 def orchestrator_mock():
     mock = AsyncMock()
     mock.process.return_value = MagicMock(
+        spec=OrchestrationResult,
         output="test-response",
         message_history=["msg1", "msg2"],
         usage=Usage(requests=1, request_tokens=20, response_tokens=10, total_tokens=30),
+        thinking="thinking",
     )
     return mock
 
@@ -95,11 +97,21 @@ async def test_process_request_handles_orchestrator_exception(
     chat_history = assistant_service.memory[test_data.chat_uid]
 
     assert chat_history.message_history == []
-
     assert chat_history.usage == Usage()
 
 
-# 3. Parallel chats
+@pytest.mark.asyncio
+async def test_process_request_handles_orchestrator_thinking(orchestrator_mock, test_deps):
+    """Test that orchestrator thinking is properly handled."""
+
+    service = AssistantService(orchestrator_mock)
+    assist_response = await service.process_request(
+        UserData(chat_uid="chat-123", user_input="Hello", app_context={}), test_deps
+    )
+    assert assist_response.thinking == orchestrator_mock.process.return_value.thinking
+    assert assist_response.output == orchestrator_mock.process.return_value.output
+
+
 @pytest.mark.asyncio
 async def test_concurrent_chats(orchestrator_mock, test_deps):
     """Test that concurrent chats work independently."""

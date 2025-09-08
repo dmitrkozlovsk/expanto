@@ -223,9 +223,8 @@ class MessageHistoryContainer:
                 else:
                     for message in message_history:
                         with st.chat_message(message.role, avatar=AVATARS[message.role]):
-                            if hasattr(message, 'thinking') and message.thinking:
-                                st.expander("Thinking Part", expanded=False)\
-                                    .markdown(message.thinking)
+                            if hasattr(message, "thinking") and message.thinking:
+                                st.expander("Thinking Part", expanded=False).markdown(message.thinking)
                             if message.type == MessageType.MESSAGE:
                                 st.markdown(message.content)
                             elif message.type == MessageType.ERROR:

@@ -23,9 +23,10 @@ def app_script():
         success=True,
         usage=None,
         error_msg=None,
+        thinking="this is a thinking message",
     )
     error_chat_response = ChatResponse.model_construct(
-        chat_msg=None, supplement=None, success=False, usage=None, error_msg="error"
+        chat_msg=None, supplement=None, success=False, usage=None, error_msg="error", thinking=None
     )
 
     cmd = st.session_state.get("__cmd")
@@ -117,6 +118,7 @@ def test_update_state_success():
     at.session_state["__cmd"] = "update_state_success"
     at.run()
     assert at.session_state["chat_state"].msg_history[-1].content == "hello"
+    assert at.session_state["chat_state"].msg_history[-1].thinking == "this is a thinking message"
     assert at.session_state["chat_state"].msg_history[-1].role == Role.ASSISTANT
     assert "ExperimentDefinition" in at.session_state["chat_state"].supplements
 
