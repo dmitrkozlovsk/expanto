@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from src.domain.results import MetricResult
+from src.domain.results import JobResult
 from src.ui.common import URLParams, put_return_in_app_ctx
 from src.ui.data_loaders import get_precomputes_for_planning
 from src.ui.experiments.inputs import ExperimentSelectBox
@@ -91,7 +91,9 @@ class ExperimentPlannerPage:
                 st.session_state.precomputes_form = precomputes_form
 
     @staticmethod
-    def _handle_planning_job(status_field: DeltaGenerator, params: DummyObsSelectedParams) -> dict | None:
+    def _handle_planning_job(
+        status_field: DeltaGenerator, params: DummyObsSelectedParams
+    ) -> JobResult | None:
         """Handle the planning job execution.
 
         Args:
@@ -99,22 +101,31 @@ class ExperimentPlannerPage:
             params: Parameters for the planning calculation.
 
         Returns:
-            Job result dictionary if successful, None otherwise.
+            JobResult, None otherwise.
         """
         try:
             job_result = get_precomputes_for_planning(**asdict(params))
         except Exception as e:
             status_field.error(f"❌ Failed to run calculation: {e}")
             return None
-        if not job_result.get("success", False) and (error_message := job_result.get("error_message")):
-            error_message = f"❌ Job calculation ended with error: {error_message}"
+
+        if not job_result:
+            error_message = "❌ Job calculation ended with error: Unknown error"
             status_field.error(error_message)
-        elif job_result.get("success", False) and (job_id := job_result.get("job_id", None)):
-            st.toast(f"✅️ Job {job_id} has finished successfully!")
+            return None
+        elif not job_result.success and (job_error_message := job_result.error_message):
+            formated_error_message = f"❌ Job calculation ended with error: {job_error_message}"
+            status_field.error(formated_error_message)
+            return None
+        elif job_result.success:
+            st.toast(f"✅️ Job {job_result.job_id} has finished successfully!")
             return job_result
+        error_message = "Unexpected behavior. Please contact developer."
+        status_field.error(error_message)
         return None
 
     @staticmethod
+    @st.fragment
     def _render_graph_layout(selected_experiment_id: int | None) -> dict | None:
         """Render the graph layout for experiment results.
 
@@ -128,14 +139,11 @@ class ExperimentPlannerPage:
             st.info("Fill in the fields and start observations")
             return None
 
-        if not (job_result := st.session_state.job_results_cache.get(selected_experiment_id, None)):
+        if not (job_result := st.session_state.job_results_cache.get(selected_experiment_id)):
             st.info("Fill in the fields and start observations")
             return None
 
-        if metric_results_dict := job_result.get("metric_results"):
-            metric_results = [MetricResult(**mr) for mr in metric_results_dict]
-        else:
-            metric_results = []
+        metric_results = job_result.metric_results if job_result.metric_results else []
 
         if metric_results:
             selection_info = EffectSizePanel.render(metric_results, precomputes_form).info

@@ -75,7 +75,7 @@ def generate_stats_by_ratio_samples(numerator_1, denominator_1, numerator_2, den
     [
         ([(100, 20, 50, 30, 0.5), (100, 20, 50, 30, 0.5)], 10000, 43, lambda pval: pval > 0.05),
         ([(100, 20, 50, 30, 0.1), (120, 20, 50, 30, 0.1)], 100000, 42, lambda pval: pval < 0.01),
-        ([(100, 20, 50, 30, 0.5), (120, 20, 50, 30, 0.5)], 1000, None, lambda pval: pval < 0.05),
+        ([(100, 20, 50, 30, 0.5), (120, 20, 50, 30, 0.5)], 1000, 100, lambda pval: pval < 0.05),
     ],
 )
 def test_ratio_metric_test_trivial(
@@ -99,7 +99,7 @@ def test_ratio_metric_test_trivial(
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "n_simulations, samples_params, sample_size, seed",
-    [(5000, (120, 20, 50, 30, 0.1), 2000, 122), (10000, (120, 20, 50, 30, 0.1), 20000, None)],
+    [(5000, (120, 20, 50, 30, 0.1), 2000, 122), (10000, (120, 20, 50, 30, 0.1), 20000, 55)],
 )
 def test_ratio_metric_test_reliability_norm(
     generate_samples_ratio, n_simulations, samples_params, sample_size, seed
@@ -129,7 +129,7 @@ def test_ratio_metric_test_reliability_norm(
 @pytest.mark.parametrize(
     "n_simulations, samples_params, sample_size, seed",
     # samples_params(lambda_n, lambda_d, correlation)
-    [(200000, (1 / 2, 1 / 20, 0.85), 5000, 120), (10000, (1 / 2, 1 / 10, 0.4), 20000, None)],
+    [(200000, (1 / 2, 1 / 20, 0.85), 5000, 120), (10000, (1 / 2, 1 / 10, 0.4), 20000, 1010)],
 )
 def test_ratio_metric_test_reliability_expon(
     generate_samples_ratio_expon, n_simulations, samples_params, sample_size, seed

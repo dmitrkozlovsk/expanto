@@ -1,6 +1,6 @@
 
 WITH joined_events_testids AS (
-    {% include "base/events_x_testids.sql" %}
+    {% include "snowflake_example/events_x_testids.sql" %}
 )
 SELECT
    j.{{ observation.split_id }}

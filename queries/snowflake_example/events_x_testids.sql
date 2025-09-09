@@ -1,11 +1,11 @@
 WITH raw_events_cte AS (
-        {% include "base/events.sql" %}
+        {% include "snowflake_example/events.sql" %}
     )
     , testids_cte AS (
        {%- if purpose == 'planning' -%}
-            {% include "base/dummy_testids.sql" %}
+            {% include "snowflake_example/dummy_testids.sql" %}
        {%- else -%}
-            {% include "base/testids.sql" %}
+            {% include "snowflake_example/testids.sql" %}
        {%- endif -%}
     )
 SELECT

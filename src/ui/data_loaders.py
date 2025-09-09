@@ -7,11 +7,11 @@ All functions use Streamlit's caching mechanism to improve performance.
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 import streamlit as st
 
+from src.domain.results import JobResult
 from src.logger_setup import logger
 from src.services.entities.dtos import CalculationJobDTO, ExperimentDTO, ObservationDTO
 from src.services.entities.handlers import (
@@ -339,8 +339,9 @@ def get_precomputes_for_planning(
     exposure_end_datetime: datetime,
     exposure_event: str,
     split_id: str,
+    calculation_scenario: str,
     experiment_metric_names: list[str],
-) -> dict:
+) -> JobResult:
     """Run calculation and get metric precomputes for experiment planning.
 
     Creates a dummy observation with the provided parameters and runs calculations
@@ -373,7 +374,7 @@ def get_precomputes_for_planning(
         experiment_id=None,
         name=None,
         db_experiment_name=None,
-        calculation_scenario=None,
+        calculation_scenario=calculation_scenario,
         _created_at=None,
         _updated_at=None,
     )
@@ -384,7 +385,7 @@ def get_precomputes_for_planning(
         CalculationPurpose.PLANNING,
         experiment_metric_names=experiment_metric_names,
     )
-    return asdict(job_result) if job_result else {}
+    return job_result
 
 
 # ---------------------------------- OTHER ----------------------------------

@@ -1,5 +1,5 @@
 WITH user_aggregation AS (
-    {% include "base/user_aggregation.sql" %}
+    {% include "snowflake_example/user_aggregation.sql" %}
 )
 {% for experiment_metric in experiment_metrics_list %}
 SELECT

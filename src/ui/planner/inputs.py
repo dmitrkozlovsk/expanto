@@ -11,6 +11,7 @@ from src.ui.data_loaders import (
     get_available_exposure_events,
     get_experiment_by_id,
 )
+from src.ui.observations.inputs import CalculationScenarioSelectBox
 from src.ui.resources import load_metrics_handler
 
 
@@ -281,6 +282,7 @@ class DummyObsSelectedParams:
     exposure_end_datetime: date | None = None
     exposure_event: str | None = None
     split_id: str | None = None
+    calculation_scenario: str | None = None
     experiment_metric_names: list[str] | None = None
 
 
@@ -320,6 +322,7 @@ class GetPrecomputesForm:
             the selected parameters upon submission.
         """
         with st.form(f"Dummy Observation Params for {experiment_id_}"):
+            calculation_scenario = CalculationScenarioSelectBox.render().selected_scenario
             key_metrics_selectbox = KeyMetricsSelectBox.render(experiment_id_)
             time_input_section = TimeInputSection.render(experiment_id_)
             col1, col2 = st.columns(2)
@@ -359,6 +362,7 @@ class GetPrecomputesForm:
                         exposure_end_datetime=time_input_section.selected_exposure_end_datetime,
                         exposure_event=exposure_event_selectbox.selected_exposure_event,
                         split_id=split_id_selectbox.selected_split_id,
+                        calculation_scenario=calculation_scenario,
                         experiment_metric_names=key_metrics_selectbox.selected_metrics,
                     ),
                 )
