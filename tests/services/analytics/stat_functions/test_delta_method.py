@@ -18,6 +18,8 @@ def generate_samples_ratio() -> Callable:
     """Fixture generating two random samples based on provided statistics."""
 
     def _generate_samples(mean_n, std_n, mean_d, std_d, correlation, sample_size, seed=None):
+        if seed is not None:
+            np.random.seed(seed)
         cov_nd = correlation * std_n * std_d
         cov_matrix = [[std_n**2, cov_nd], [cov_nd, std_d**2]]
         data = np.random.multivariate_normal([mean_n, mean_d], cov_matrix, size=sample_size)
@@ -31,6 +33,8 @@ def generate_samples_ratio_expon() -> Callable:
     """Fixture generating two random samples based on provided statistics."""
 
     def _generate_samples(lambda_n, lambda_d, correlation, sample_size, seed=None):
+        if seed is not None:
+            np.random.seed(seed)
         cov_nd = correlation * 1 * 1
         cov_matrix = [[1, cov_nd], [cov_nd, 1]]
         data = np.random.multivariate_normal([0, 0], cov_matrix, size=sample_size)
