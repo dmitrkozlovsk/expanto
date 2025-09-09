@@ -1,15 +1,15 @@
 with
     events AS (
-        {% include "base_new/events.sql" %}
+        {% include "bigquery_example/events.sql" %}
     ),
     testids AS (
-        {% include "base_new/testids.sql" %}
+        {% include "bigquery_example/testids.sql" %}
     ),
     events_x_testids AS (
-        {% include "base_new/events_x_testids.sql" %}
+        {% include "bigquery_example/events_x_testids.sql" %}
     ),
     user_aggregation AS (
-        {% include "base_new/user_aggregation.sql" %}
+        {% include "bigquery_example/user_aggregation.sql" %}
     )
     aggregated AS (
         SELECT

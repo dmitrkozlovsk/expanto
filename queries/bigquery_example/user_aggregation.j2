@@ -11,8 +11,8 @@ INNER JOIN {{ audience_table }} as audience_{{ loop.index }}
 WHERE 1=1
     AND exposure_timestamp BETWEEN '{{ observation.exposure_start_datetime }}'
         AND '{{ observation.exposure_end_datetime }}'
-    AND event_timestamp BETWEEN '{{ observation.calc_start_datetime }}'
-        AND '{{ observation.calc_end_datetime }}'
+    AND (event_timestamp BETWEEN '{{ observation.calc_start_datetime }}'
+        AND '{{ observation.calc_end_datetime }}' or event_timestamp is null)
     {%- if observation.filters -%}
     {%- for filter in observation.filters %}
     AND {{ filter }}
