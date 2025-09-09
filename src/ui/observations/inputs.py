@@ -143,6 +143,25 @@ class ObservationFormData:
 
 
 @dataclass
+class CalculationScenarioSelectBox:
+    """Dataclass to hold calculation scenario data."""
+
+    selected_scenario: str
+
+    @classmethod
+    def render(cls, predefined_scenario: str | None = None) -> CalculationScenarioSelectBox:
+        scenario_list = load_calculation_scenarios()
+        scenario_value = predefined_scenario
+        default_index = scenario_list.index(scenario_value) if scenario_value in scenario_list else 0
+        calculation_scenario = st.selectbox(
+            "Calculation Scenario",
+            scenario_list,
+            index=default_index,
+        )
+        return cls(selected_scenario=calculation_scenario)
+
+
+@dataclass
 class ObservationFormInputs:
     """Dataclass to hold the observation form inputs and state."""
 
@@ -211,16 +230,19 @@ class ObservationFormInputs:
             with col1l2:
                 split_id = st.text_input("Split ID (required)", value=predefined.split_id)
             with col2l2:
-                scenario_list = load_calculation_scenarios()
-                scenario_value = str(predefined.calculation_scenario)
-                default_index = (
-                    scenario_list.index(scenario_value) if scenario_value in scenario_list else 0
-                )
-                calculation_scenario = st.selectbox(
-                    "Calculation Scenario",
-                    scenario_list,
-                    index=default_index,
-                )
+                calculation_scenario = CalculationScenarioSelectBox.render(
+                    str(predefined.calculation_scenario)
+                ).selected_scenario
+                # scenario_list = load_calculation_scenarios()
+                # scenario_value = str(predefined.calculation_scenario)
+                # default_index = (
+                #     scenario_list.index(scenario_value) if scenario_value in scenario_list else 0
+                # )
+                # calculation_scenario = st.selectbox(
+                #     "Calculation Scenario",
+                #     scenario_list,
+                #     index=default_index,
+                # )
             col1l3, col2l3 = st.columns(2)
             # dates and times
             utc_now_dt = dt_utils.utc_now().date()

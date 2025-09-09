@@ -6,6 +6,8 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
+from src.domain.results import JobResult, MetricResult
+
 
 @pytest.fixture(autouse=True)
 def _clear_streamlit_caches():
@@ -37,13 +39,19 @@ def test_planner_page_initial_display(
     """Test planner page initial display and element setup."""
     at = planner_page_app_test
     at.run()
+
     assert "Select metrics to plan" in at.multiselect[0].label
     assert at.date_input[0].label == "Start"
     assert at.date_input[1].label == "End"
     assert at.date_input[2].label == "Start "
     assert at.date_input[3].label == "End "
-    assert at.selectbox[1].label == "Exposure Event"
-    assert at.selectbox[2].label == "Split ID"
+
+    # Check selectbox elements in the new order:
+    # [0] = Select experiment, [1] = Calculation Scenario, [2] = Exposure Event, [3] = Split ID
+    assert at.selectbox[0].label == "Select experiment"
+    assert at.selectbox[1].label == "Calculation Scenario"
+    assert at.selectbox[2].label == "Exposure Event"
+    assert at.selectbox[3].label == "Split ID"
 
     assert at.button[0].label == "Get Precomputes"
     assert "Fill in the fields and start observations" in at.info[0].value
@@ -51,7 +59,10 @@ def test_planner_page_initial_display(
     at.selectbox[0].select((1, "Button Color Test")).run()
     exp_metrics = next(filter(lambda exp: exp.name == "Button Color Test", mock_experiments)).key_metrics
     assert set(at.multiselect[0].value) == set(exp_metrics)
-    assert at.selectbox[1].value is None
+    # Calculation Scenario now has a default value 'base', not None
+    assert at.selectbox[1].value == "base"
+    # Exposure Event should be None initially
+    assert at.selectbox[2].value is None
 
 
 def test_planner_page_get_precomputes_runner_error(
@@ -70,30 +81,28 @@ def test_planner_page_with_precomputes(planner_page_app_test, patch_configs, tab
     """Test planner page functionality with mocked precompute data."""
     at = planner_page_app_test
 
+    # Create proper MetricResult objects instead of dictionaries
     mock_metric_results_data = [
-        {
-            "job_id": 1,
-            "group_name": "control",
-            "metric_name": "conversion_rate",
-            "metric_display_name": "Conversion Rate",
-            "metric_type": "proportion",
-            "observation_cnt": 10000,
-            "metric_value": 0.1,
-            "numerator_avg": 0.1,
-            "numerator_var": 0.09,
-            "denominator_avg": 1,
-            "denominator_var": 1,
-            "covariance": 1,
-        }
+        MetricResult(
+            job_id=1,
+            group_name="control",
+            metric_name="conversion_rate",
+            metric_display_name="Conversion Rate",
+            metric_type="proportion",
+            observation_cnt=10000,
+            metric_value=0.1,
+            numerator_avg=0.1,
+            numerator_var=0.09,
+            denominator_avg=1,
+            denominator_var=1,
+            covariance=1,
+        )
     ]
 
     # Mock the JobResult structure that get_precomputes_for_planning should return
-    mock_job_result = {
-        "job_id": 1,
-        "success": True,
-        "metric_results": mock_metric_results_data,
-        "error_message": None,
-    }
+    mock_job_result = JobResult(
+        job_id=1, success=True, metric_results=mock_metric_results_data, error_message=None
+    )
 
     mock_selection = {
         "selection": {

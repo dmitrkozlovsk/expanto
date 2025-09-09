@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
+from sqlalchemy import Column
 
 from src.domain.enums import CalculationPurpose, JobStatus
 from src.domain.results import JobResult, MetricResult
@@ -87,7 +88,7 @@ class JobGateway:
         self._jobs = JobHandler(engine)
         self._precompute = PrecomputeHandler(engine)
 
-    def create_pending(self, observation_id: int):
+    def create_pending(self, observation_id: int | None):
         job = self._jobs.create(
             observation_id=observation_id,
             query="",
@@ -154,10 +155,11 @@ class CalculationRunner:
         experiment_metric_names: list[str] | None = None,
     ) -> JobResult:
         try:
-            job = self.jobs.create_pending(int(obs.id))  # type: ignore[union-attr]
+            obs_id = int(obs.id) if isinstance(obs.id, Column | int) else None  # type: ignore[union-attr]
+            job = self.jobs.create_pending(obs_id)
         except Exception as e:
             # DB/job creation unavailable - cannot write error to job.
-            obs_id = getattr(obs, "id", "?")
+            obs_id = getattr(obs, "id", None)
             logger.exception("CREATE_JOB failed for observation #{obs_id}", obs_id=obs_id)
             # Return JobResult with sentinel job_id=0 (job not created).
             return _err(None, f"Job create failed for observation #{obs_id}: {e}")
