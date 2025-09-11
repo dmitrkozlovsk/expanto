@@ -110,6 +110,28 @@ class MetricInfoDialog:
         st.write(metric_info)
 
 
+class SampleRatioMismatchCheckExpander:
+    @staticmethod
+    def render():
+        pass
+
+@dataclass
+class TabHeader:
+    """Renders a tab header with a toggle for grouped view."""
+    grouped_view_flg: bool
+    p_value_threshold: float | None
+
+    @classmethod
+    def render(cls):
+        pass
+
+
+class MetricsResultTable:
+    """Renders the results table for metrics."""
+    @staticmethod
+    def render(_filtered_table: pd.DataFrame, _) -> None:
+        pass
+
 @dataclass
 class ResultsTables:
     """Renders the results tables for experiment groups."""
@@ -117,6 +139,7 @@ class ResultsTables:
     groups_results: Any
 
     @classmethod
+    @st.fragment
     def render(
         cls,
         significance_df: pd.DataFrame,
@@ -146,6 +169,21 @@ class ResultsTables:
         significance_df.loc[unknown_names_filter, ("", "metric_display_name")] = significance_df.loc[
             unknown_names_filter, ("", "metric_name")
         ]
+
+        flat_metrics = load_metrics_handler().flat
+
+        def define_metric_group(metric_name: str, _flat_metrics) -> str:
+            exp_definition = flat_metrics.get(metric_name)
+            return exp_definition.group_name if exp_definition else "Other"
+
+
+        significance_df.loc[:, ("", "metric_group")] = (
+            significance_df.loc[:, ("", "metric_name")]
+            .apply(define_metric_group, _flat_metrics=flat_metrics)
+        )
+
+        unique_groups = significance_df.loc[:, ("", "metric_group")].unique()
+
         if not group_filters.compared_groups:
             st.info("Please select at least one group")
             return None
@@ -156,31 +194,43 @@ class ResultsTables:
         groups_results = []
 
         tab_names = [f"Test Group: {group}" for group in group_filters.compared_groups]
-        flat_metrics = load_metrics_handler().flat
 
         for index, tab in enumerate(st.tabs(tab_names)):
             with tab:
+
+                #define test and control groups
                 compared_group = group_filters.compared_groups[index]
-
                 control_group = group_filters.control_group
-                header_str = (
-                    f"`{control_group} {observation_cnt.get(control_group)}` "
-                    f"vs. `{compared_group} {observation_cnt.get(compared_group)}`"
-                )
 
-                tab.header(header_str)
+                #define header for tab
+                col1, col2 = st.columns([3, 1], vertical_alignment='center')
+                with col1:
+                    header_str = (
+                        f"### `{control_group} {observation_cnt.get(control_group)}` "
+                        f"vs. `{compared_group} {observation_cnt.get(compared_group)}`"
+                    )
+                    st.markdown(header_str)
+                with col2:
+                    container = st.container(vertical_alignment="center", horizontal_alignment='right')
+                    with container:
+                        grouped_view_flg = st.toggle("Grouped View", key=f"grouped_view_toggle_{index}")
+
+
+
+
+                #clean and prepare columns
                 compared_group_columns = [
                     col
                     for col in significance_df.columns
                     if col[0] == compared_group
-                    or col[1] in ("metric_display_name", "metric_type", "metric_name")
+                    or col[1] in ("metric_display_name", "metric_type", "metric_name", "metric_group")
                 ]
                 significance_table_compared_group = significance_df[compared_group_columns]
                 significance_table_compared_group.columns = [
                     col[1] for col in significance_table_compared_group.columns
                 ]
 
-                def filter_metric(metric_name: str, _flat_metrics: dict[str, Any]) -> bool:
+                def filter_metric(metric_name: str, _flat_metrics: dict[str, Any], _metric_filters: MetricsFilters) -> bool:
                     metric = _flat_metrics.get(metric_name)
                     if not metric:
                         return True
@@ -194,7 +244,7 @@ class ResultsTables:
                     return bool(in_group or has_tag)
 
                 filter_ = significance_table_compared_group.metric_name.apply(
-                    filter_metric, _flat_metrics=flat_metrics
+                    filter_metric, _flat_metrics=flat_metrics, _metric_filters=metric_filters,
                 )
                 filtered_significance_table_compared_group = significance_table_compared_group[filter_]
 
@@ -203,39 +253,48 @@ class ResultsTables:
                     for col in filtered_significance_table_compared_group.columns
                 }
 
-                styler = SignificanceTableStyler(
-                    p_value_threshold=selected_pvalue_threshold, selected_metric_groups=None
-                )
+                unique_groups = significance_df.loc[:, ("", "metric_group")].unique()
+                for group_name in unique_groups:
+                    group_filter = filtered_significance_table_compared_group.metric_group == group_name
+                    group_table =\
+                        filtered_significance_table_compared_group[group_filter]
+                    if group_table.empty:
+                        continue
+                    tab.caption(f"##### {group_name}")
 
-                styled_significance_table_compared_group = styler.apply_styles(
-                    filtered_significance_table_compared_group
-                )
+                    styler = SignificanceTableStyler(
+                            p_value_threshold=selected_pvalue_threshold, selected_metric_groups=None
+                        )
 
-                column_order = [
-                    "metric_display_name",
-                    "metric_value_control",
-                    "metric_value_compared",
-                    "diff_ratio",
-                    "p_value",
-                ]
+                    styled_significance_table_compared_group = styler.apply_styles(
+                        group_table
+                    )
 
-                table_height = min(
-                    30 * styled_significance_table_compared_group.data.shape[0] + 36, 560
-                )  # todo fix magic numbers
-                selection = st.dataframe(
-                    data=styled_significance_table_compared_group,
-                    use_container_width=True,
-                    height=table_height,
-                    key=f"styled_significance_table_compared_group_table_{index}",
-                    column_config=column_config,
-                    column_order=column_order,
-                    hide_index=True,
-                    on_select="rerun",
-                    selection_mode="single-row",
-                )
-                rows = selection.selection["rows"]  # type: ignore[attr-defined]
-                if len(rows) > 0:
-                    MetricInfoDialog.render(rows, styled_significance_table_compared_group)
+                    column_order = [
+                        "metric_display_name",
+                        "metric_value_control",
+                        "metric_value_compared",
+                        "diff_ratio",
+                        "p_value",
+                    ]
+
+                    table_height = min(
+                        31 * styled_significance_table_compared_group.data.shape[0] + 33, 560
+                    )  # todo fix magic numbers
+                    selection = st.dataframe(
+                        data=styled_significance_table_compared_group,
+                        use_container_width=True,
+                        height=table_height,
+                        key=f"styled_significance_table_compared_group_table_{index}_{group_name}",
+                        column_config=column_config,
+                        column_order=column_order,
+                        hide_index=True,
+                        on_select="rerun",
+                        selection_mode="single-row",
+                    )
+                    rows = selection.selection["rows"]  # type: ignore[attr-defined]
+                    if len(rows) > 0:
+                        MetricInfoDialog.render(rows, styled_significance_table_compared_group)
 
                 groups_results.append(
                     {

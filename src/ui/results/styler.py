@@ -31,7 +31,7 @@ class StColumnConfig:
     _config = ST_TYPE_OF_COLUMNS_CONFIG
 
     @classmethod
-    def get(cls, column_key: str) -> ColumnConfig:
+    def get(cls, column_key: str) -> ColumnConfig | None:
         """Gets the Streamlit column configuration for a given column key.
 
         Args:
@@ -47,7 +47,7 @@ class StColumnConfig:
 
         base = cls._config.get(column_key)
         if base is None:
-            raise KeyError(f"Unknown column key: {column_key}")
+            return None
 
         column_type = base.get("type")
         kwargs = {
