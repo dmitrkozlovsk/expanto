@@ -8,10 +8,8 @@ group filtering, significance calculations, and the presentation of results in t
 from concurrent.futures import Future
 from typing import Any
 
-import pandas as pd  # type: ignore
 import streamlit as st
 
-from src.services.analytics.calculators import SignificanceCalculator
 from src.ui.actions import run_observation_calculation
 from src.ui.common import URLParams, put_return_in_app_ctx
 from src.ui.data_loaders import (
@@ -19,7 +17,7 @@ from src.ui.data_loaders import (
     get_precomputes_by_job_id,
 )
 from src.ui.layout import AppLayout
-from src.ui.results.elements import ResultsTables, RunJobButton,SampleRatioMismatchCheckExpander
+from src.ui.results.elements import TablesLayout, RunJobButton, ResultPageLayout
 from src.ui.results.inputs import (
     ExperimentGroupsFilters,
     MetricsFilters,
@@ -54,7 +52,10 @@ class ResultsPage:
     def _render_content(cls, url_params: URLParams) -> dict[str, Any] | None:
         """Renders the main content of the results page."""
 
+        #First, trying to run job calculation if needed
         cls._handle_obs_to_be_calculated()
+
+        #Render main filters and Run Button
         top_col1, top_col2 = st.columns([30, 7], vertical_alignment='bottom')
         with top_col1:
             job_filters = SelectJobFilters.render(url_params.job_id, url_params.observation_id)
@@ -65,58 +66,18 @@ class ResultsPage:
             st.info("No jobs selected. Please select a job.")
             return None
 
+        #Download Precomputes
+        metric_precomputes = get_precomputes_by_job_id(job_filters.selected_job_id)
 
-        layout_col1, layout_col2 = st.columns([12, 30], vertical_alignment='top',)
-        with layout_col1:
-            with st.container(vertical_alignment="bottom", horizontal_alignment='center'):
-                st.markdown("### Settings")
+        #Render Main Layout with results
+        result_tables_rendered = ResultPageLayout.render(metric_precomputes)
 
-            metric_precomputes = get_precomputes_by_job_id(job_filters.selected_job_id)
-            if isinstance(metric_precomputes, pd.DataFrame) and metric_precomputes.empty:
-                st.warning("Precomputes are empty")
-                return None
-            elif not isinstance(metric_precomputes, pd.DataFrame) and not metric_precomputes:
-                st.error("Precomputes for selected job not found.")
-                return None
-            group_filters = ExperimentGroupsFilters.render(metric_precomputes.reset_index())
-
-            observation_cnt = metric_precomputes.groupby("group_name")["observation_cnt"].unique().to_dict()
-
-            if not group_filters.control_group or not group_filters.compared_groups:
-                return None
-
-            try:
-                calculator = SignificanceCalculator(
-                    precomputed_metrics_df=metric_precomputes, control_group=group_filters.control_group
-                )
-
-                raw_significance_table = calculator.get_metrics_significance_df()
-            except Exception as e:
-                error_message = f"Could not get significance table: {e}"
-                st.error(error_message)
-                return None
-
-            pvalue_threshold_filter = PValueThresholdFilter.render()
-            metric_filters = MetricsFilters.render()
-            SampleRatioMismatchCheckExpander.render()
-
-        with layout_col2:
-            try:
-                result_tables_rendered = ResultsTables.render(
-                    raw_significance_table,
-                    group_filters,
-                    pvalue_threshold_filter.threshold,
-                    metric_filters,
-                    observation_cnt,
-                )
-                return cls._unite_result_page_return(job_filters, result_tables_rendered)
-            except Exception as e:
-                error_message = f"Could not render results table. Error: {e}"
-                st.error(error_message)
-                return None
+        return cls._unite_result_page_return(job_filters, result_tables_rendered)
 
     @staticmethod
     def _handle_obs_to_be_calculated() -> None:
+        #todo: add full docstring
+        """Handle the calculation of observations."""
         if st.session_state.get("obs_calculation_status_success"):
             job_id = st.query_params.get("job_id", "Unknown")
             st.toast(f"✅️ Job {job_id} has finished successfully!")
@@ -134,8 +95,9 @@ class ResultsPage:
             st.error(error_message)
         finally:
             del st.session_state["obs_to_be_calculated"]
+
+
         if isinstance(job_result, Future):
-            st.rerun()
             return None
         if job_result and not job_result.success and job_result.error_message:
             error_message = f"❌ Job calculation ended with error: `{job_result.error_message}`"
@@ -150,7 +112,7 @@ class ResultsPage:
 
     @staticmethod
     def _unite_result_page_return(
-        job_filters: SelectJobFilters, result_table_render: ResultsTables | None
+        job_filters: SelectJobFilters, result_table_render: TablesLayout | None
     ) -> dict[str, Any]:
         """Unite page return data."""
         selected: dict[str, Any] = {}

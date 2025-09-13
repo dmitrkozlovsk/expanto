@@ -92,7 +92,7 @@ class SignificanceTableStyler:
         selected_metric_groups: A list of metric groups to consider for styling.
     """
 
-    def __init__(self, p_value_threshold: float | None, selected_metric_groups: list[str] | None = None):
+    def __init__(self, p_value_threshold: float | None):
         """Initializes the SignificanceTableStyler.
 
         Args:
@@ -100,7 +100,6 @@ class SignificanceTableStyler:
             selected_metric_groups: A list of metric groups to be styled.
         """
         self.p_value_threshold = p_value_threshold or 0
-        self.selected_metric_groups = selected_metric_groups
 
     def highlight_significant_rows(self, style_df: Styler) -> Styler:
         """Highlights significant rows in a DataFrame.

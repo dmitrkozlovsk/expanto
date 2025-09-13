@@ -5,18 +5,53 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import pandas as pd  # type: ignore
 import streamlit as st
 
+from src.services.analytics.calculators import SignificanceCalculator
 from src.ui.resources import load_metrics_handler
-from src.ui.results.inputs import ExperimentGroupsFilters
+from src.ui.results.inputs import ExperimentGroupsFilters, PValueThresholdFilter
+from src.ui.results.inputs import MetricsFilters
 from src.ui.results.styler import SignificanceTableStyler, StColumnConfig
 
 if TYPE_CHECKING:
-    import pandas as pd  # type: ignore
     from pandas.io.formats.style import Styler  # type: ignore
+    from src.services.metric_register import ExperimentMetricDefinition
+    from streamlit.elements.lib.column_types import ColumnConfig
 
-    from src.ui.results.inputs import MetricsFilters
-from src.ui.results.inputs import PValueThresholdFilter
+
+TABLE_ROW_PXLS = 31 # pixel height of a table row
+INDENT_TABLE_PXLS = 33 # indentation for a table
+MAX_TABLE_HEIGHT_PXLS = 560  # Maximum pixel height for a table to prevent it from exceeding the viewport
+
+#--------------------------------HELP FUNC-----------------------------------
+def is_metric_in_metric_filters(
+        metric_name: str,
+        flat_metrics: dict[str, Any],
+        metric_filters: MetricsFilters
+    ) -> bool:
+    """Checks if a metric is in the metric filters."""
+    print(metric_name)
+    print(flat_metrics)
+    print(metric_filters)
+    metric = flat_metrics.get(metric_name)
+    if not metric:
+        return True
+
+    if not (metric_filters.groups or metric_filters.tags):
+        return True
+
+    in_group = metric_filters.groups and metric.group_name in metric_filters.groups
+    has_tag = metric_filters.tags and bool(set(metric.tags) & set(metric_filters.tags))
+
+    return bool(in_group or has_tag)
+
+def define_metric_group(metric_name: str, flat_metrics: dict[str, ExperimentMetricDefinition]) -> str:
+    """Defines the group name for a metric."""
+    exp_definition = flat_metrics.get(metric_name)
+    return exp_definition.group_name if exp_definition else "Other"
+
+#-------------------------------- Elements -----------------------------------
 
 class RunJobDialog:
     """Renders a dialog to choose how to run a calculation job."""
@@ -112,103 +147,117 @@ class MetricInfoDialog:
 
 class SampleRatioMismatchCheckExpander:
     @staticmethod
-    def render():
+    @st.fragment
+    def render(observation_cnt: dict[str, Any]) -> None:
         with st.expander("Sample Ratio Mismatch Check", expanded=False):
             st.markdown("place for srm")
 
-@dataclass
-class ResultTableTabHeader:
-    """Renders a tab header with a toggle for grouped view."""
-    grouped_view_flg: bool
-    p_value_threshold: float | None
 
-    @classmethod
-    def render(cls):
-        pass
-
-
-class MetricsResultTable:
+class ResultsDataframes:
     """Renders the results table for metrics."""
+
     @staticmethod
-    def render(_filtered_table: pd.DataFrame, _) -> None:
+    def _one_table_view(
+            compare_group: str,
+            df: pd.DataFrame,
+            styler: SignificanceTableStyler,
+            column_config: dict[str, ColumnConfig]
+    ):
         pass
+    #todo _one_table_view
+    @staticmethod
+    def _grouped_view(
+            compared_group: str,
+            df: pd.DataFrame,
+            styler: SignificanceTableStyler,
+            column_config: dict[str, ColumnConfig]
+    ):
+        """Renders the results table for metrics in grouped view."""
 
-@dataclass
-class ResultsTables:
-    """Renders the results tables for experiment groups."""
+        metric_groups = list(df.metric_group.unique())
+        for metric_group_name in metric_groups:
+            group_filter = df.metric_group == metric_group_name
+            metric_group_df = df[group_filter]
+            if metric_group_df.empty:
+                continue
+            st.caption(f"###### {metric_group_name}")
 
-    groups_results: Any
+            styled_df = styler.apply_styles(metric_group_df)
 
-    @classmethod
+            column_order = [
+                "metric_display_name",
+                "metric_value_control",
+                "metric_value_compared",
+                "diff_ratio",
+                "p_value",
+            ]
+            table_rows_cnt = styled_df.data.shape[0]
+            table_height = min(
+                TABLE_ROW_PXLS * table_rows_cnt  + INDENT_TABLE_PXLS,
+                MAX_TABLE_HEIGHT_PXLS
+            )
+            selection = st.dataframe(
+                data=styled_df,
+                width='stretch',
+                height=table_height,
+                key=f"styled_df_{compared_group}_{metric_group_name}",
+                column_config=column_config,
+                column_order=column_order,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+            )
+            rows = selection.selection["rows"]  # type: ignore[attr-defined]
+            if len(rows) > 0:
+                MetricInfoDialog.render(rows, styled_df)
+
+
+    @staticmethod
     @st.fragment
     def render(
-        cls,
-        significance_df: pd.DataFrame,
-        group_filters: ExperimentGroupsFilters,
-        selected_pvalue_threshold: float | None,
-        metric_filters: MetricsFilters,
-        observation_cnt: dict[str, Any],
-    ) -> ResultsTables | None:
-        """Renders the significance results in separate tabs for each compared group.
+            compare_group: str,
+            df: pd.DataFrame,
+            styler: SignificanceTableStyler,
+            grouped_view_flg: bool = False,
+    ) -> None:
 
-        For each group being compared against the control group, this method
-        creates a tab. Inside each tab, it displays a formatted and styled
-        table of significance metrics. It handles filtering of columns and
-        enables row selection to view detailed metric information via
-        `MetricInfoDialog`.
+        column_config = {col: StColumnConfig.get(col) for col in df.columns}
 
-        Args:
-            significance_df: DataFrame containing the full significance results.
-            group_filters: An object containing the selected control and
-                compared groups.
-            result_table_column_filter: An object containing the selected
-                columns to display in the table.
-            selected_pvalue_threshold: The p-value threshold for styling
-                significant results.
-        """
-        unknown_names_filter = significance_df.loc[:, ("", "metric_display_name")].isna()
-        significance_df.loc[unknown_names_filter, ("", "metric_display_name")] = significance_df.loc[
-            unknown_names_filter, ("", "metric_name")
-        ]
-
-        flat_metrics = load_metrics_handler().flat
-
-        def define_metric_group(metric_name: str, _flat_metrics) -> str:
-            exp_definition = flat_metrics.get(metric_name)
-            return exp_definition.group_name if exp_definition else "Other"
+        if grouped_view_flg:
+            ResultsDataframes._grouped_view(compare_group, df, styler, column_config)
+        ResultsDataframes._ungrouped_view(compare_group, df, styler, column_config)
 
 
-        significance_df.loc[:, ("", "metric_group")] = (
-            significance_df.loc[:, ("", "metric_name")]
-            .apply(define_metric_group, _flat_metrics=flat_metrics)
-        )
+class TablesLayout:
+    """Renders the results tables for experiment groups."""
 
-        unique_groups = significance_df.loc[:, ("", "metric_group")].unique()
+    @staticmethod
+    @st.fragment
+    def render(
+        prepared_tables: list[PreparedTable],
+        observations_cnt: dict[str, Any],
+        styler: SignificanceTableStyler,
+    ) -> list[dict[str, str]] | None:
 
-        if not group_filters.compared_groups:
-            st.info("Please select at least one group")
-            return None
-        if not group_filters.control_group:
-            st.info("Please select a control group")
-            return None
+        """Renders the results tables for experiment groups."""
 
         groups_results = []
 
-        tab_names = [f"Test Group: {group}" for group in group_filters.compared_groups]
+        tab_names = [f"Test Group: {table.compared_group}" for table in prepared_tables]
 
         for index, tab in enumerate(st.tabs(tab_names)):
             with tab:
+                prepared_table = prepared_tables[index]
 
-                #define test and control groups
-                compared_group = group_filters.compared_groups[index]
-                control_group = group_filters.control_group
+                compared_group = prepared_table.compared_group
+                control_group = prepared_table.control_group
 
                 #define header for tab
                 col1, col2 = st.columns([30, 15], vertical_alignment='center')
                 with col1:
                     header_str = (
-                        f"#### `{control_group} {observation_cnt.get(control_group)}` "
-                        f"vs. `{compared_group} {observation_cnt.get(compared_group)}`"
+                        f"#### `{control_group} {observations_cnt.get(control_group)}` "
+                        f"vs. `{compared_group} {observations_cnt.get(compared_group)}`"
                     )
                     st.markdown(header_str)
                 with col2:
@@ -216,92 +265,154 @@ class ResultsTables:
                     with container:
                         grouped_view_flg = st.toggle("Grouped View", key=f"grouped_view_toggle_{index}")
 
+                ResultsDataframes.render(compared_group, prepared_table.df, styler, grouped_view_flg)
+
+        return groups_results
+
+@dataclass
+class SettingsColumnLayout:
+    """Renders the settings column for the results page."""
+    p_value_threshold: float | None
+    metric_filters: MetricsFilters
+    group_filters: ExperimentGroupsFilters
+    observations_cnt: dict[str, Any]
+
+    @classmethod
+    def render(cls, precomputes: pd.DataFrame | None) -> SettingsColumnLayout | None:
+        with st.container(vertical_alignment="bottom", horizontal_alignment='center'):
+            st.markdown("#### Settings")
+        if isinstance(precomputes, pd.DataFrame) and precomputes.empty:
+            st.warning("Precomputes are empty")
+            return None
+        elif not isinstance(precomputes, pd.DataFrame) and not precomputes:
+            st.error("Precomputes for selected job not found.")
+            return None
+
+        group_filters = ExperimentGroupsFilters.render(precomputes.reset_index())
+
+        if not group_filters.compared_groups:
+            st.info("Please select at least one compared group")
+            return None
+        if not group_filters.control_group:
+            st.info("Please select a control group")
+            return None
+
+        p_value_threshold_filter = PValueThresholdFilter.render().threshold
+        metric_filters = MetricsFilters.render()
+
+        observations_cnt = precomputes.groupby("group_name")["observation_cnt"].unique().to_dict()
+        SampleRatioMismatchCheckExpander.render(observations_cnt)
+
+        return cls(
+            p_value_threshold=p_value_threshold_filter,
+            metric_filters=metric_filters,
+            group_filters=group_filters,
+            observations_cnt=observations_cnt
+        )
+
+@dataclass
+class PreparedTable:
+    """Prepares a table for display."""
+    df: pd.DataFrame
+    control_group: str
+    compared_group: str
+
+class ResultPageLayout:
+    """Renders the results page layout."""
+
+    @staticmethod
+    def calc_and_prepare_results_table(
+            precomputes: pd.DataFrame,
+            settings: SettingsColumnLayout
+    ) -> list[PreparedTable] | None:
+        """fileter and prepare result tables for display"""
+        try:
+            calculator = SignificanceCalculator(
+                precomputed_metrics_df=precomputes,
+                control_group=settings.group_filters.control_group
+            )
+            raw_significance_table = calculator.get_metrics_significance_df()
+        except Exception as e:
+            error_message = f"Could not get significance table: {e}"
+            st.error(error_message)
+            return None
+
+        #fillin missing display names
+        unknown_names_filter = raw_significance_table.loc[:, ("", "metric_display_name")].isna()
+        raw_significance_table.loc[unknown_names_filter, ("", "metric_display_name")] = \
+            raw_significance_table.loc[unknown_names_filter, ("", "metric_name")]
+
+        flat_metrics = load_metrics_handler().flat
+
+        #get metric's group name
+        raw_significance_table.loc[:, ("", "metric_group")] = (
+            raw_significance_table.loc[:, ("", "metric_name")]
+            .apply(define_metric_group, flat_metrics=flat_metrics)
+        )
+
+        metric_filter =\
+            raw_significance_table.loc[:, ("", "metric_name")].apply(
+                is_metric_in_metric_filters,
+                flat_metrics=flat_metrics,
+                metric_filters=settings.metric_filters,
+        )
+
+        filtered_significance_table = raw_significance_table[metric_filter]
+
+        prepared_tables: list[PreparedTable] = []
+
+        for compared_group in settings.group_filters.compared_groups:
+
+            compared_group_columns = [
+                col
+                for col in filtered_significance_table.columns
+                if col[0] == compared_group
+                   or col[1] in ("metric_display_name", "metric_type", "metric_name", "metric_group")
+            ]
+            filtered_compared_groups_df = filtered_significance_table[compared_group_columns]
+            filtered_compared_groups_df.columns = [
+                col[1] for col in filtered_compared_groups_df.columns
+            ]
+            prepared_table = PreparedTable(
+                df=filtered_compared_groups_df,
+                control_group=settings.group_filters.control_group,
+                compared_group=compared_group,
+            )
+            prepared_tables.append(prepared_table)
+
+        return prepared_tables
 
 
-                #clean and prepare columns
-                compared_group_columns = [
-                    col
-                    for col in significance_df.columns
-                    if col[0] == compared_group
-                    or col[1] in ("metric_display_name", "metric_type", "metric_name", "metric_group")
-                ]
-                significance_table_compared_group = significance_df[compared_group_columns]
-                significance_table_compared_group.columns = [
-                    col[1] for col in significance_table_compared_group.columns
-                ]
+    @staticmethod
+    def render(precomputes: pd.DataFrame | None) -> TablesLayout | None:
 
-                def filter_metric(metric_name: str, _flat_metrics: dict[str, Any], _metric_filters: MetricsFilters) -> bool:
-                    metric = _flat_metrics.get(metric_name)
-                    if not metric:
-                        return True
+        layout_col1, layout_col2 = st.columns([12, 30], vertical_alignment='top',)
 
-                    if not (metric_filters.groups or metric_filters.tags):
-                        return True
+        with layout_col1: #left col with settings
+            settings = SettingsColumnLayout.render(precomputes)
+        if settings is None:
+            return None
 
-                    in_group = metric_filters.groups and metric.group_name in metric_filters.groups
-                    has_tag = metric_filters.tags and bool(set(metric.tags) & set(metric_filters.tags))
+        with layout_col2: #right column with metric results
+            prepared_tables = ResultPageLayout.calc_and_prepare_results_table(precomputes, settings)
+            styler = SignificanceTableStyler(settings.p_value_threshold)
+            TablesLayout.render(
+                prepared_tables,
+                observations_cnt=settings.observations_cnt,
+                styler=styler
+            )
 
-                    return bool(in_group or has_tag)
+            # try:
+            #     result_tables_rendered = TablesLayout.render(
+            #         raw_significance_table,
+            #         settings_columns.group_filters,
+            #         settings_columns.p_value_threshold,
+            #         settings_columns.metric_filters,
+            #         settings_columns.observation_cnt,
+            #     )
+            #     return result_tables_rendered
+            # except Exception as e:
+            #     error_message = f"Could not render results table. Error: {e}"
+            #     st.error(error_message)
+            #     return None
 
-                filter_ = significance_table_compared_group.metric_name.apply(
-                    filter_metric, _flat_metrics=flat_metrics, _metric_filters=metric_filters,
-                )
-                filtered_significance_table_compared_group = significance_table_compared_group[filter_]
-
-                column_config = {
-                    col: StColumnConfig.get(col)
-                    for col in filtered_significance_table_compared_group.columns
-                }
-
-                unique_groups = significance_df.loc[:, ("", "metric_group")].unique()
-                for group_name in unique_groups:
-                    group_filter = filtered_significance_table_compared_group.metric_group == group_name
-                    group_table =\
-                        filtered_significance_table_compared_group[group_filter]
-                    if group_table.empty:
-                        continue
-                    tab.caption(f"###### {group_name}")
-
-                    styler = SignificanceTableStyler(
-                            p_value_threshold=selected_pvalue_threshold, selected_metric_groups=None
-                        )
-
-                    styled_significance_table_compared_group = styler.apply_styles(
-                        group_table
-                    )
-
-                    column_order = [
-                        "metric_display_name",
-                        "metric_value_control",
-                        "metric_value_compared",
-                        "diff_ratio",
-                        "p_value",
-                    ]
-
-                    table_height = min(
-                        31 * styled_significance_table_compared_group.data.shape[0] + 33, 560
-                    )  # todo fix magic numbers
-                    selection = st.dataframe(
-                        data=styled_significance_table_compared_group,
-                        width='stretch',
-                        height=table_height,
-                        key=f"styled_significance_table_compared_group_table_{index}_{group_name}",
-                        column_config=column_config,
-                        column_order=column_order,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode="single-row",
-                    )
-                    rows = selection.selection["rows"]  # type: ignore[attr-defined]
-                    if len(rows) > 0:
-                        MetricInfoDialog.render(rows, styled_significance_table_compared_group)
-
-                groups_results.append(
-                    {
-                        "table": styled_significance_table_compared_group.data.round(5).to_csv(index=False),
-                        "control_group": group_filters.control_group,
-                        "compared_group": compared_group,
-                    }
-                )
-
-        return cls(groups_results=groups_results)
