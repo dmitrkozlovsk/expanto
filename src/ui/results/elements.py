@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pandas.io.formats.style import Styler  # type: ignore
 
     from src.ui.results.inputs import MetricsFilters
-
+from src.ui.results.inputs import PValueThresholdFilter
 
 class RunJobDialog:
     """Renders a dialog to choose how to run a calculation job."""
@@ -113,10 +113,11 @@ class MetricInfoDialog:
 class SampleRatioMismatchCheckExpander:
     @staticmethod
     def render():
-        pass
+        with st.expander("Sample Ratio Mismatch Check", expanded=False):
+            st.markdown("place for srm")
 
 @dataclass
-class TabHeader:
+class ResultTableTabHeader:
     """Renders a tab header with a toggle for grouped view."""
     grouped_view_flg: bool
     p_value_threshold: float | None
@@ -203,10 +204,10 @@ class ResultsTables:
                 control_group = group_filters.control_group
 
                 #define header for tab
-                col1, col2 = st.columns([3, 1], vertical_alignment='center')
+                col1, col2 = st.columns([30, 15], vertical_alignment='center')
                 with col1:
                     header_str = (
-                        f"### `{control_group} {observation_cnt.get(control_group)}` "
+                        f"#### `{control_group} {observation_cnt.get(control_group)}` "
                         f"vs. `{compared_group} {observation_cnt.get(compared_group)}`"
                     )
                     st.markdown(header_str)
@@ -214,7 +215,6 @@ class ResultsTables:
                     container = st.container(vertical_alignment="center", horizontal_alignment='right')
                     with container:
                         grouped_view_flg = st.toggle("Grouped View", key=f"grouped_view_toggle_{index}")
-
 
 
 
@@ -260,7 +260,7 @@ class ResultsTables:
                         filtered_significance_table_compared_group[group_filter]
                     if group_table.empty:
                         continue
-                    tab.caption(f"##### {group_name}")
+                    tab.caption(f"###### {group_name}")
 
                     styler = SignificanceTableStyler(
                             p_value_threshold=selected_pvalue_threshold, selected_metric_groups=None
@@ -283,7 +283,7 @@ class ResultsTables:
                     )  # todo fix magic numbers
                     selection = st.dataframe(
                         data=styled_significance_table_compared_group,
-                        use_container_width=True,
+                        width='stretch',
                         height=table_height,
                         key=f"styled_significance_table_compared_group_table_{index}_{group_name}",
                         column_config=column_config,

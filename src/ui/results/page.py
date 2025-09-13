@@ -19,7 +19,7 @@ from src.ui.data_loaders import (
     get_precomputes_by_job_id,
 )
 from src.ui.layout import AppLayout
-from src.ui.results.elements import ResultsTables, RunJobButton
+from src.ui.results.elements import ResultsTables, RunJobButton,SampleRatioMismatchCheckExpander
 from src.ui.results.inputs import (
     ExperimentGroupsFilters,
     MetricsFilters,
@@ -55,17 +55,21 @@ class ResultsPage:
         """Renders the main content of the results page."""
 
         cls._handle_obs_to_be_calculated()
-
-        layout_col1, layout_col2 = st.columns([12, 30])
-
-        with layout_col1:
+        top_col1, top_col2 = st.columns([30, 7], vertical_alignment='bottom')
+        with top_col1:
             job_filters = SelectJobFilters.render(url_params.job_id, url_params.observation_id)
+        with top_col2:
             if job_filters.selected_observation_id:
                 RunJobButton.render(job_filters.selected_observation_id)
-            st.divider()
-            if job_filters.selected_job_id is None:
-                st.info("No jobs selected. Please select a job.")
-                return None
+        if job_filters.selected_job_id is None:
+            st.info("No jobs selected. Please select a job.")
+            return None
+
+
+        layout_col1, layout_col2 = st.columns([12, 30], vertical_alignment='top',)
+        with layout_col1:
+            with st.container(vertical_alignment="bottom", horizontal_alignment='center'):
+                st.markdown("### Settings")
 
             metric_precomputes = get_precomputes_by_job_id(job_filters.selected_job_id)
             if isinstance(metric_precomputes, pd.DataFrame) and metric_precomputes.empty:
@@ -94,6 +98,7 @@ class ResultsPage:
 
             pvalue_threshold_filter = PValueThresholdFilter.render()
             metric_filters = MetricsFilters.render()
+            SampleRatioMismatchCheckExpander.render()
 
         with layout_col2:
             try:

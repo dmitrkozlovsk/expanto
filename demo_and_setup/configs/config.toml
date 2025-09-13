@@ -1,9 +1,24 @@
 # streamlit configs
 [theme]
 base="light"
-primaryColor="#c71313"
-textColor="#0f1450"
+primaryColor="#1c1c1c"
+backgroundColor="#FFFFFF"
+secondaryBackgroundColor="#F0F2F6"
+textColor="#000000"
+linkColor="#4F8BF9"
+font="sans-serif"
+headingFont="serif"
+headingFontWeights = 600
+baseRadius = "large"
+buttonRadius = "full"
+showWidgetBorder = true
+borderColor = "#B0B0B0" # A medium gray for the border.
+
+[theme.sidebar]
+backgroundColor = "#F0F2F6"
+
 [browser]
 gatherUsageStats = false
+
 [server]
 showEmailPrompt = false
