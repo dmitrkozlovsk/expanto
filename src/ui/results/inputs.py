@@ -193,7 +193,7 @@ class PValueThresholdFilter:
             default=0.05,
             format_func=lambda option: option_map[option],
             selection_mode="single",
-            help='P-Value threshold for highlighting. Default is 5% (0.05).',
+            help="P-Value threshold for highlighting. Default is 5% (0.05).",
             key=f"p_value_threshold_pill_{key}",
         )
 

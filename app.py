@@ -28,8 +28,9 @@ st.markdown("""
     div.block-container[data-testid="stMainBlockContainer"] {
         padding-bottom: 1rem !important;
     }
-    [data-testid="stVerticalBlock"] { gap: .7rem; }
+    [data-testid="stVerticalBlock"] { gap: .8rem; }
     [data-testid="block-container"] { padding: .7rem; }
+    
     div[data-testid="stVerticalBlock"].st-key-chat_wrap{
       height: 75dvh;                 
       flex: 0 0 75dvh !important;   

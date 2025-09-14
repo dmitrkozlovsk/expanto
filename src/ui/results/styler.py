@@ -78,7 +78,7 @@ class StColumnConfig:
             A dictionary mapping column names to their Streamlit ColumnConfig objects.
         """
         columns = df.columns.unique().tolist()
-        return {col: cls.get(col) for col in columns}
+        return {col: config for col in columns if (config := cls.get(col)) is not None}
 
 
 class SignificanceTableStyler:
