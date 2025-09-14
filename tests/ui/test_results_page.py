@@ -128,3 +128,36 @@ def test_run_calculation(
     session.expire_all()
     jobs = session.execute(select(CalculationJob)).fetchall()
     assert len(jobs) == len_jobs_before + 1
+
+
+def test_session_state_results_storage(
+    results_page_app_test,
+    patch_configs,
+    tables,
+    mock_experiments,
+    mock_observations,
+    mock_calculation_jobs,
+    mock_precomputes,
+):
+    """Test that results are properly stored in session state under 'selected' key."""
+    at = results_page_app_test
+    at.run()
+    at.selectbox[0].select((1, 1, "Main Conversion Analysis")).run()
+
+    # Check that session state contains the expected structure
+    app_context = at.session_state["app_context"]
+    print(app_context)
+
+    # Verify experiment and observation IDs are stored
+    assert hasattr(app_context, "selected")
+
+    selected = app_context.selected
+    assert "experiment_id" in selected
+    assert "observation_id" in selected
+    assert "job_id" in selected
+    assert "results" in selected
+
+    first_result = selected["results"][0]
+    assert "table" in first_result
+    assert "control_group" in first_result
+    assert "compared_group" in first_result
