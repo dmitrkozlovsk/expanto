@@ -100,14 +100,14 @@ class SelectJobFilters:
             predefined_job_id = None
             predefined_observation_id = None
 
-        # filter_col1, filter_col2 = st.columns(2)
-        # with filter_col1:
-        selected_observation = ObservationSelectBox.render(predefined_observation_id, None)
-        # with filter_col2:
-        selected_job = JobSelectBox.render(
-            selected_observation_id=selected_observation.id if selected_observation else None,
-            predefined_job_id=predefined_job_id,
-        )
+        filter_col1, filter_col2 = st.columns(2)
+        with filter_col1:
+            selected_observation = ObservationSelectBox.render(predefined_observation_id, None)
+        with filter_col2:
+            selected_job = JobSelectBox.render(
+                selected_observation_id=selected_observation.id if selected_observation else None,
+                predefined_job_id=predefined_job_id,
+            )
 
         return cls(
             selected_observation_name=selected_observation.name if selected_observation else None,
@@ -179,7 +179,7 @@ class PValueThresholdFilter:
         return 0.05 if value is None else value
 
     @classmethod
-    def render(cls) -> PValueThresholdFilter:
+    def render(cls, key: str | None = None) -> PValueThresholdFilter:
         """Renders pills to select a p-value threshold.
 
         Returns:
@@ -193,6 +193,8 @@ class PValueThresholdFilter:
             default=0.05,
             format_func=lambda option: option_map[option],
             selection_mode="single",
+            help="P-Value threshold for highlighting. Default is 5% (0.05).",
+            key=f"p_value_threshold_pill_{key}",
         )
 
         return cls(threshold=selected_p_value_threshold)
@@ -212,8 +214,6 @@ class MetricsFilters:
         Returns:
             An instance with the selected filter values.
         """
-        if st.session_state.get("metrics_filter") is None:
-            st.session_state["metrics_filter"] = None
         available_tags = load_metric_tags()
         available_groups = load_metric_groups()
         groups = st.multiselect(

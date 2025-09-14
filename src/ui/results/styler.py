@@ -31,7 +31,7 @@ class StColumnConfig:
     _config = ST_TYPE_OF_COLUMNS_CONFIG
 
     @classmethod
-    def get(cls, column_key: str) -> ColumnConfig:
+    def get(cls, column_key: str) -> ColumnConfig | None:
         """Gets the Streamlit column configuration for a given column key.
 
         Args:
@@ -47,7 +47,7 @@ class StColumnConfig:
 
         base = cls._config.get(column_key)
         if base is None:
-            raise KeyError(f"Unknown column key: {column_key}")
+            return None
 
         column_type = base.get("type")
         kwargs = {
@@ -78,7 +78,7 @@ class StColumnConfig:
             A dictionary mapping column names to their Streamlit ColumnConfig objects.
         """
         columns = df.columns.unique().tolist()
-        return {col: cls.get(col) for col in columns}
+        return {col: config for col in columns if (config := cls.get(col)) is not None}
 
 
 class SignificanceTableStyler:
@@ -92,7 +92,7 @@ class SignificanceTableStyler:
         selected_metric_groups: A list of metric groups to consider for styling.
     """
 
-    def __init__(self, p_value_threshold: float | None, selected_metric_groups: list[str] | None = None):
+    def __init__(self, p_value_threshold: float | None):
         """Initializes the SignificanceTableStyler.
 
         Args:
@@ -100,7 +100,6 @@ class SignificanceTableStyler:
             selected_metric_groups: A list of metric groups to be styled.
         """
         self.p_value_threshold = p_value_threshold or 0
-        self.selected_metric_groups = selected_metric_groups
 
     def highlight_significant_rows(self, style_df: Styler) -> Styler:
         """Highlights significant rows in a DataFrame.

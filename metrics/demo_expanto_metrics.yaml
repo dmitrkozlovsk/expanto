@@ -18,7 +18,7 @@ user_aggregations: # user-level metrics with alias (for use in experiment-level 
     sql: COUNT(CASE event_name WHEN 'experiment_created' THEN event_name ELSE null END)
   satisfaction_score: &satisfaction_score
     alias: satisfaction_score
-    sql: AVG(CASE event_name WHEN 'satisfaction_survey' THEN event_value ELSE null END)
+    sql: AVG(CASE event_name WHEN 'satisfaction_survey' THEN event_value ELSE 0 END)
   
   # Additional metrics for ratio and proportion demo
   successful_experiments_cnt: &successful_experiments_cnt

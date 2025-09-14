@@ -57,7 +57,7 @@ class ExperimentPlannerPage:
         status_field = st.empty()
 
         # ------------------------------------ Layouts ------------------------------------
-        layout_col1, layout_col2 = st.columns([1, 3])
+        layout_col1, layout_col2 = st.columns([13, 30])
         with layout_col1:
             experiments_select_box = ExperimentSelectBox.render(url_params_.experiment_id)
             selected_experiment_id: int | None = (
