@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 from src.settings import AssistantServiceCfg
-from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField, chat_scroll
+from src.ui.chat.elements import MessageHistoryContainer, TokenUsageBar, UserInputField
 from src.ui.chat.schemas import MessageType, Role
 from src.ui.chat.services import ChatController, HttpAssistantService
 from src.ui.resources import load_assistant_service_cfg
@@ -63,7 +63,7 @@ class Chat:
         UserInputField.render(controller)  # if user input: save to chat state and rerun
 
         # Handle input and response logic
-        run_every = 0.5 if chat_state.future_result else None
+        run_every = 1.5 if chat_state.future_result else None
 
         @st.fragment(run_every=run_every)
         def handle_future_response(placeholder):
@@ -87,6 +87,5 @@ class Chat:
                     st.rerun()
             else:
                 placeholder.show_status()
-                chat_scroll()
 
         handle_future_response(agent_placeholder)

@@ -16,6 +16,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.result import StreamedRunResult
+from pydantic_ai.usage import UsageLimits
 
 from assistant.core.agents import AgentManager, AgentOrchestrator
 from assistant.core.models import ModelFactory
@@ -338,4 +339,6 @@ async def test_agent_orchestrator_extracts_thinking_part():
     assert result.output == mock_output_content
     mock_agent_manager.get_agent.assert_any_call(route_id="route")
     mock_agent_manager.get_agent.assert_any_call(route_id="universal")
-    mock_agent.run.assert_awaited_once_with(mock_user_input, deps=deps, message_history=[])
+    mock_agent.run.assert_awaited_once_with(
+        mock_user_input, deps=deps, message_history=[], usage_limits=UsageLimits(request_limit=5)
+    )
