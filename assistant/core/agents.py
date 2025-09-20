@@ -7,6 +7,7 @@ from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.messages import ModelMessage, ModelResponse, ThinkingPart
+from pydantic_ai.settings import ModelSettings
 
 from assistant.core.models import ModelFactory
 from assistant.core.schemas import Deps, ExperimentDefinition, OrchestrationResult, RouterOutput
@@ -71,6 +72,7 @@ class AgentManager:
             instructions=load_prompt("experiment_creator_instructions.md").render(),
             output_type=ExperimentDefinition,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=10_000),
             tools=[
                 retrieve_metrics_docs,
             ],
@@ -89,6 +91,7 @@ class AgentManager:
             instructions=load_prompt("sql_expert_instructions.md").render(),
             output_type=str,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=10_000),
             tools=[
                 retrieve_internal_db,
             ],
@@ -108,6 +111,7 @@ class AgentManager:
             instructions=load_prompt("experiment_analyst_instructions.md").render(),
             output_type=str,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=20_000),
             tools=[
                 get_expanto_app_context,
             ],
@@ -127,6 +131,7 @@ class AgentManager:
             instructions=load_prompt("internet_search_instructions.md").render(),
             output_type=str,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=10_000),
             tools=[tavily_search_tool(self.tavily_api_key)],
         )
 
@@ -139,6 +144,7 @@ class AgentManager:
             instructions="Use as many tool call as you needed",
             output_type=str,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=10_000),
             tools=[
                 retrieve_relevant_docs,
                 retrieve_codebase_docs,
@@ -160,6 +166,7 @@ class AgentManager:
             "Use any tools if you need to answer user question or execute user task",
             output_type=str,
             deps_type=Deps,
+            model_settings=ModelSettings(max_tokens=10_000),
             tools=[
                 retrieve_metrics_docs,
                 retrieve_relevant_docs,
