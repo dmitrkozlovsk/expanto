@@ -20,7 +20,7 @@ from collections import namedtuple
 import numpy as np
 from scipy.optimize import root_scalar  # type: ignore
 from scipy.special import ndtr, stdtr, stdtrit  # type: ignore
-from scipy.stats import norm, t  # type: ignore
+from scipy.stats import chi2, norm, t  # type: ignore
 from statsmodels.stats.power import TTestIndPower  # type: ignore
 
 from src.services.analytics._constants import NORM_PPF_ALPHA_TWO_SIDED, NORM_PPF_BETA
@@ -29,6 +29,9 @@ from src.utils import ValidationUtils
 # Define types for result
 ConfidenceInterval = namedtuple("ConfidenceInterval", ["lower", "upper"])
 TestResult = namedtuple("TestResult", ["statistic", "p_value", "ci", "diff_abs", "diff_ratio"])
+SRMResult = namedtuple(
+    "SRMResult", ["statistic", "p_value", "df", "expected", "observed", "allocation", "is_srm"]
+)
 
 
 def ttest_welch(
@@ -609,3 +612,71 @@ def sample_size_ratio_metric(
 
     n_required = 2 * (z_alpha + z_beta) ** 2 * ratio_var / (diff**2)
     return np.ceil(n_required)
+
+
+# -------------------------- SAMPLE RATIO MISMATCH FUNCTION -------------------------- #
+
+
+def sample_ratio_mismatch_test(
+    observed_counts: list[int] | np.ndarray,
+    expected_ratios: list[float] | np.ndarray | None = None,
+    alpha: float = 1e-3,
+) -> SRMResult:
+    """Sample Ratio Mismatch (SRM) via Pearson's chi-square goodness-of-fit.
+
+    Args:
+        observed_counts: 1-D array-like of non-negative integers per arm.
+        expected_ratios: 1-D array-like of expected proportions (sum ~ 1).
+                         If None, assumes uniform split.
+        alpha: Significance level for flagging SRM.
+
+    Returns:
+        SRMResult(statistic, p_value, df, expected_counts, observed_counts, allocation, is_srm)
+    """
+    obs = np.asarray(observed_counts, dtype=float)
+    if obs.ndim != 1:
+        raise ValueError("observed_counts must be 1-D")
+    if obs.size < 2:
+        raise ValueError("observed_counts must contain at least 2 groups")
+    if np.any(obs < 0):
+        raise ValueError("All observed counts must be non-negative")
+
+    N = obs.sum()
+    if not np.isfinite(N) or N <= 0:
+        raise ValueError("Total count must be positive")
+
+    k = obs.size
+    if expected_ratios is None:
+        alloc = np.full(k, 1.0 / k, dtype=float)
+    else:
+        alloc = np.asarray(expected_ratios, dtype=float)
+        if alloc.shape != (k,):
+            raise ValueError("expected_ratios must have the same length as observed_counts")
+        if np.any(~np.isfinite(alloc)) or np.any(alloc <= 0):
+            raise ValueError("All expected ratios must be finite and strictly positive")
+        s = float(alloc.sum())
+        if not np.isfinite(s) or s <= 0:
+            raise ValueError("expected_ratios must sum to a positive number")
+        if not np.isclose(s, 1.0, rtol=1e-6, atol=1e-12):
+            raise ValueError("expected_ratios must sum to 1 (within tolerance)")
+
+    expected = N * alloc
+    if np.any(expected <= 0):
+        raise ValueError("Expected counts contain zeros; ensure expected_ratios > 0 and N > 0")
+
+    # Pearson's chi-square
+    stat = np.sum((obs - expected) ** 2 / expected)
+    df = k - 1
+    p = chi2.sf(stat, df)
+
+    is_srm = bool(p < alpha)
+
+    return SRMResult(
+        statistic=float(stat),
+        p_value=float(p),
+        df=int(df),
+        expected=expected.astype(float),
+        observed=obs.astype(int),
+        allocation=alloc.astype(float),
+        is_srm=is_srm,
+    )

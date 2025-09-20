@@ -152,8 +152,72 @@ class SampleRatioMismatchCheckExpander:
         Args:
             observation_cnt: A dictionary with observation counts per group.
         """
+        import pandas as pd
+
+        from src.services.analytics.stat_functions import sample_ratio_mismatch_test
+
         with st.expander("SRM Check", expanded=False):
-            st.markdown("place for srm")
+            placeholder = st.empty()
+            if not observation_cnt or len(observation_cnt) < 2:
+                st.warning("Need at least 2 groups to perform SRM check")
+                return
+
+            groups_from_page = observation_cnt.keys()
+            selected_groups = st.segmented_control(
+                label="Select groups",
+                options=groups_from_page,
+                key="srm_check_control",
+                default=groups_from_page,
+                selection_mode="multi",
+            )
+            if len(selected_groups) < 2:
+                st.warning("Need at least 2 groups to perform SRM check")
+                return
+
+            obs_items = [(k, int(v)) for k, v in observation_cnt.items() if k in selected_groups]
+            df = pd.DataFrame(obs_items, columns=["group", "counts"])
+            total_counts = df.counts.sum()
+            df["current_ratio"] = df.counts / total_counts
+            df["expected_ratio"] = 1 / df.shape[0]
+
+            col1, col2, col3 = st.columns([1, 1, 2])
+            expected_ratios = []
+            col1.markdown("**Group**")
+            col2.markdown("**Counts**")
+            col3.markdown("**Expected**")
+            for row in df.iterrows():
+                series = row[1]
+                col1, col2, col3 = st.columns([1, 1, 2])
+                col1.write(series.group)
+                col2.text(f"{int(series.counts)}")
+                with col3:
+                    ratio_value = st.number_input(
+                        "Ratio",
+                        min_value=0.001,
+                        max_value=1.0,
+                        value=series.expected_ratio,
+                        step=0.01,
+                        key=f"srm_ratio_{series.group}",
+                        label_visibility="collapsed",
+                    )
+                    expected_ratios.append(ratio_value)
+
+            if st.button("🔍 Check for SRM", type="primary"):
+                try:
+                    result = sample_ratio_mismatch_test(
+                        observed_counts=df.counts, expected_ratios=expected_ratios, alpha=1e-3
+                    )
+                    if result.is_srm:
+                        placeholder.error(
+                            f"Sample Ratio Mismatch detected! p-value: {result.p_value:.4f}", icon="🔥"
+                        )
+                    else:
+                        placeholder.success(
+                            f"No Sample Ratio Mismatch detected. p-value: {result.p_value:.4f}", icon="✅"
+                        )
+
+                except Exception as e:
+                    placeholder.warning(f"Error running SRM test: {e}")
 
 
 class ResultsDataframes:
