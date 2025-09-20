@@ -59,14 +59,17 @@ class Chat:
             is_stream_output=assistant_cfg.enable_streaming,
         )
         agent_placeholder = history_container.agent_placeholder
+        if chat_state.future_result:
+            agent_placeholder.show_status()
+
         # TODO: feature - select mode for agent (auto, create, multipurpose)
         UserInputField.render(controller)  # if user input: save to chat state and rerun
 
         # Handle input and response logic
-        run_every = 0.5 if chat_state.future_result else None
+        run_every = 2 if chat_state.future_result else None
 
         @st.fragment(run_every=run_every)
-        def handle_future_response(placeholder):
+        def handle_future_response():
             state = ChatStateManager.get_or_create_state()
             if not state.future_result:
                 return
@@ -74,7 +77,6 @@ class Chat:
                 try:
                     response = state.future_result.result()  # get result
                     state.future_result = None
-                    agent_placeholder.handle_response(response)
                     ChatStateManager.update_state(response)
                 except Exception as e:
                     ChatStateManager.add_message(
@@ -83,10 +85,10 @@ class Chat:
                         content=str(e),
                         thinking=None,
                     )
+                    chat_scroll()
                 finally:  # prevent eternal loop
                     st.rerun()
             else:
-                placeholder.show_status()
-                chat_scroll()
+                return
 
-        handle_future_response(agent_placeholder)
+        handle_future_response()
