@@ -152,8 +152,9 @@ class SampleRatioMismatchCheckExpander:
         Args:
             observation_cnt: A dictionary with observation counts per group.
         """
-        from src.services.analytics.stat_functions import sample_ratio_mismatch_test
         import pandas as pd
+
+        from src.services.analytics.stat_functions import sample_ratio_mismatch_test
 
         with st.expander("SRM Check", expanded=False):
             placeholder = st.empty()
@@ -167,7 +168,7 @@ class SampleRatioMismatchCheckExpander:
                 options=groups_from_page,
                 key="srm_check_control",
                 default=groups_from_page,
-                selection_mode="multi"
+                selection_mode="multi",
             )
             if len(selected_groups) < 2:
                 st.warning("Need at least 2 groups to perform SRM check")
@@ -197,10 +198,9 @@ class SampleRatioMismatchCheckExpander:
                         value=series.expected_ratio,
                         step=0.01,
                         key=f"srm_ratio_{series.group}",
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
                     )
                     expected_ratios.append(ratio_value)
-
 
             if st.button("🔍 Check for SRM", type="primary"):
                 try:
@@ -208,12 +208,16 @@ class SampleRatioMismatchCheckExpander:
                         observed_counts=df.counts, expected_ratios=expected_ratios, alpha=1e-3
                     )
                     if result.is_srm:
-                        placeholder.error(f"Sample Ratio Mismatch detected! p-value: {result.p_value:.4f}", icon="🔥")
+                        placeholder.error(
+                            f"Sample Ratio Mismatch detected! p-value: {result.p_value:.4f}", icon="🔥"
+                        )
                     else:
-                        placeholder.success(f"No Sample Ratio Mismatch detected. p-value: {result.p_value:.4f}", icon="✅")
+                        placeholder.success(
+                            f"No Sample Ratio Mismatch detected. p-value: {result.p_value:.4f}", icon="✅"
+                        )
 
                 except Exception as e:
-                    placeholder.error(f"Error running SRM test: {e}")
+                    placeholder.warning(f"Error running SRM test: {e}")
 
 
 class ResultsDataframes:

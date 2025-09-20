@@ -620,7 +620,7 @@ def sample_size_ratio_metric(
 def sample_ratio_mismatch_test(
     observed_counts: list[int] | np.ndarray,
     expected_ratios: list[float] | np.ndarray | None = None,
-    alpha: float = 1e-3, 
+    alpha: float = 1e-3,
 ) -> SRMResult:
     """Sample Ratio Mismatch (SRM) via Pearson's chi-square goodness-of-fit.
 
@@ -652,17 +652,16 @@ def sample_ratio_mismatch_test(
         alloc = np.asarray(expected_ratios, dtype=float)
         if alloc.shape != (k,):
             raise ValueError("expected_ratios must have the same length as observed_counts")
-        if np.any(alloc < 0):
-            raise ValueError("All expected ratios must be non-negative")
-        s = alloc.sum()
+        if np.any(~np.isfinite(alloc)) or np.any(alloc <= 0):
+            raise ValueError("All expected ratios must be finite and strictly positive")
+        s = float(alloc.sum())
         if not np.isfinite(s) or s <= 0:
             raise ValueError("expected_ratios must sum to a positive number")
-        if not np.isclose(alloc.sum(), 1):
-            raise ValueError("expected_ratios must sum to 1")
-        alloc = alloc / s
+        if not np.isclose(s, 1.0, rtol=1e-6, atol=1e-12):
+            raise ValueError("expected_ratios must sum to 1 (within tolerance)")
 
     expected = N * alloc
-    if np.any(expected == 0):
+    if np.any(expected <= 0):
         raise ValueError("Expected counts contain zeros; ensure expected_ratios > 0 and N > 0")
 
     # Pearson's chi-square
