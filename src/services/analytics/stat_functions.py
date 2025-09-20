@@ -657,6 +657,8 @@ def sample_ratio_mismatch_test(
         s = alloc.sum()
         if not np.isfinite(s) or s <= 0:
             raise ValueError("expected_ratios must sum to a positive number")
+        if not np.isclose(alloc.sum(), 1):
+            raise ValueError("expected_ratios must sum to 1")
         alloc = alloc / s
 
     expected = N * alloc
