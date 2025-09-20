@@ -122,7 +122,6 @@ class ValidationUtils:
             "DO",
             "VACUUM",
             "ANALYZE",
-            "SET",
             "RESET",
             "LOCK",
             "UNLOCK",
