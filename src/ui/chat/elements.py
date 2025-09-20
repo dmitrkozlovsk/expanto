@@ -174,7 +174,7 @@ class AssistantMessagePlaceholder:
 
     def show_status(self) -> None:
         """Show thinking status message."""
-        self.placeholder.status("Thinking... Please, don't change the page. It may take a while.")
+        self.placeholder.status("Thinking... ", expanded=False)
 
     def show_error(self, error_msg: str | None) -> None:
         """Show error message.
