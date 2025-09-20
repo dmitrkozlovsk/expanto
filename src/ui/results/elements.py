@@ -235,7 +235,6 @@ class SampleRatioMismatchCheckExpander:
                     st.write(result)
                 except Exception:
                     st.error("Error running SRM test")
-
 class ResultsDataframes:
     """Renders the results table for metrics."""
 

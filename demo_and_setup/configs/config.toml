@@ -22,3 +22,8 @@ gatherUsageStats = false
 
 [server]
 showEmailPrompt = false
+fileWatcherType = "none"
+runOnSave = false
+folderWatchList = ["src"]
+folderWatchBlacklist = [".git", ".venv", "venv", "node_modules",
+    "__pycache__", ".pytest_cache", "data", "dist", "build"]
