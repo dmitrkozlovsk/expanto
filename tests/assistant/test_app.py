@@ -6,6 +6,7 @@ Test‑suite for FastAPI application (`assistant/app.py`) rewritten to synchrono
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -36,60 +37,63 @@ def user_payload() -> dict[str, Any]:
 # ---------------------------------- Happy‑path test ----------------------------------
 
 
+@patch("assistant.app.logger.instrument_requests", lambda *a, **k: None)
+@patch("assistant.app.logger.instrument_sqlalchemy", lambda *a, **k: None)
 @patch("assistant.app.init_assistant_service")
 @patch("assistant.app.init_engine")
 @patch("assistant.app.init_vdb")
 def test_invoke_success(mock_vdb, mock_engine, mock_service, user_payload, dummy_usage, patch_configs):
-    """/invoke returns AgentResponse and disposes engine on shutdown."""
-
     fake_response = AssistantResponse(output="hi!", usage=dummy_usage, thinking="thinking")
-    # assistant_service is async, so we need an AsyncMock
+
+    # assistant_service — async
     mock_service_instance = AsyncMock()
     mock_service_instance.process_request.return_value = fake_response
     mock_service.return_value = mock_service_instance
 
-    # Mock DB engine + vdb
-    mock_engine_instance = AsyncMock()
-    mock_engine_instance.dispose = AsyncMock()
-    mock_engine.return_value = mock_engine_instance
+    # Engine — объект с async dispose()
+    engine = MagicMock()
+    engine.dispose = AsyncMock()
+    mock_engine.return_value = engine
+
+    # vdb — любой sync мок
     mock_vdb_instance = MagicMock()
     mock_vdb.return_value = mock_vdb_instance
 
     with TestClient(app) as client:
-        # --- request ---
         resp = client.post("/invoke", json=user_payload)
         assert resp.status_code == 200
         assert resp.json()["output"] == "hi!"
 
-    # After exiting TestClient, shutdown event has run
-    mock_engine_instance.dispose.assert_awaited_once()
+    engine.dispose.assert_awaited_once()
     mock_service_instance.process_request.assert_awaited_once()
 
 
 # ------------------------ Validation error (missing chat_uid) ------------------------
 
 
+@patch("assistant.app.logger.instrument_requests", lambda *a, **k: None)
+@patch("assistant.app.logger.instrument_sqlalchemy", lambda *a, **k: None)
 @patch("assistant.app.init_assistant_service", lambda *a, **kw: AsyncMock())
-@patch("assistant.app.init_engine", lambda *a, **kw: AsyncMock())
+@patch("assistant.app.init_engine", lambda *a, **kw: SimpleNamespace(dispose=AsyncMock()))
 @patch("assistant.app.init_vdb", lambda *a, **kw: MagicMock())
 def test_invoke_validation_error(user_payload, patch_configs):
-    """Test validation error when chat_uid is missing."""
     payload = user_payload.copy()
     payload.pop("chat_uid")
     with TestClient(app) as client:
         resp = client.post("/invoke", json=payload)
-        assert resp.status_code == 422  # FastAPI validation error
+        assert resp.status_code == 422
 
 
 #
 # ---------------------------- Error path: assistant raises ----------------------------
 
 
+@patch("assistant.app.logger.instrument_requests", lambda *a, **k: None)
+@patch("assistant.app.logger.instrument_sqlalchemy", lambda *a, **k: None)
 @patch("assistant.app.init_assistant_service")
-@patch("assistant.app.init_engine", lambda *a, **kw: AsyncMock())
+@patch("assistant.app.init_engine", lambda *a, **kw: SimpleNamespace(dispose=AsyncMock()))
 @patch("assistant.app.init_vdb", lambda *a, **kw: MagicMock())
 def test_invoke_service_error(mock_service, user_payload, patch_configs):
-    """Test error handling when assistant service raises exception."""
     err = RuntimeError("model crashed")
     mock_service_instance = AsyncMock()
     mock_service_instance.process_request.side_effect = err

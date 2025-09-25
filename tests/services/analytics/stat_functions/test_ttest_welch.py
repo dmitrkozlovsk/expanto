@@ -171,3 +171,22 @@ def test_sample_size_t_test_edge_cases():
             alpha=0.05,
             beta=0.2,
         )
+
+
+def test_ttest_welch_zero_division_no_warning(recwarn):
+    """Tests that no RuntimeWarning is raised for 0/0 division with np.divide."""
+    mean_1 = np.array([10, 0])
+    var_1 = np.array([1, 1])
+    n_1 = np.array([100, 100])
+    mean_2 = np.array([12, 0])
+    var_2 = np.array([1, 1])
+    n_2 = np.array([100, 100])
+
+    result = ttest_welch(mean_1, var_1, n_1, mean_2, var_2, n_2)
+
+    # Check that no warnings were issued
+    assert len(recwarn) == 0
+
+    # The result for the 0/0 case should be np.inf with the np.divide fix
+    expected_diff_ratio = np.array([0.2, np.inf])
+    assert np.allclose(result.diff_ratio, expected_diff_ratio, equal_nan=True)
