@@ -409,7 +409,7 @@ class SettingsColumnLayout:
         p_value_threshold_filter = PValueThresholdFilter.render().threshold
         metric_filters = MetricsFilters.render()
 
-        observations_cnt = precomputes.groupby("group_name")["observation_cnt"].unique().to_dict()
+        observations_cnt = precomputes.groupby("group_name")["observation_cnt"].max().astype(int).to_dict()
         SampleRatioMismatchCheckExpander.render(observations_cnt)
 
         return cls(

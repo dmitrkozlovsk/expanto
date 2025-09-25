@@ -8,7 +8,7 @@ operations.
 Key features:
 - Welch's t-test for comparing means with unequal variances.
 - Z-test for comparing proportions.
-- Ratio metric analysis using the delta method.
+- Ratio metric anaysis using the delta method.
 - Sample size calculations for various test types.
 - Support for both scalar and vectorized operations.
 """
@@ -106,8 +106,7 @@ def ttest_welch(
     ci_upper = t_diff + t_se * stat_ppf
     ci = ConfidenceInterval(ci_lower, ci_upper)
 
-    # Handle division by zero for diff_ratio
-    diff_ratio = np.where(mean_1 != 0, t_diff / mean_1, np.inf)
+    diff_ratio = np.divide(t_diff, mean_1, out=np.full_like(t_diff, np.inf, dtype=float), where=mean_1 != 0)
 
     return TestResult(statistic=t_stat, p_value=p_value, ci=ci, diff_abs=t_diff, diff_ratio=diff_ratio)
 
