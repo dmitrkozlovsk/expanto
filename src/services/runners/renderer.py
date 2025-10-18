@@ -46,6 +46,9 @@ class QueryRenderer:
         Returns:
             str: The rendered SQL query string.
         """
+        if obs.full_custom_query:
+            return str(obs.full_custom_query)
+
         calc_scenario_path = self.templates_config.scenarios.get(str(obs.calculation_scenario))
         if not calc_scenario_path:
             error_message = (

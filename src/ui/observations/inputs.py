@@ -138,6 +138,7 @@ class ObservationFormData:
     audience_tables: list[str] | None
     filters: list[str] | None
     custom_test_ids_query: str | None
+    full_custom_query: str | None
     metric_tags: list[str] | None
     metric_groups: list[str] | None
 
@@ -345,6 +346,9 @@ class ObservationFormInputs:
                 "Supports JOINs, CTEs, subqueries, and complex aggregations. "
                 "Modifying operations (INSERT, UPDATE, DELETE) are not allowed.",
             )
+            full_custom_query = st.text_area(
+                "Full Custom Query", value="", key="full_custom_query_input_key"
+            )
 
             metric_tags: list[str] | None = st.multiselect(
                 "Metric Tags",
@@ -425,6 +429,7 @@ class ObservationFormInputs:
                     audience_tables=[t.strip() for t in audience_tables.split("\n") if t.strip()],
                     filters=[f.strip() for f in filters.split("\n") if f.strip()],
                     custom_test_ids_query=custom_test_ids_query,
+                    full_custom_query=full_custom_query,
                     metric_tags=metric_tags,
                     metric_groups=metric_groups,
                 ),

@@ -176,6 +176,12 @@ class Observation(Base):
         comment="Custom query to calculate the test_ids for the experiment. "
         "The query will be used in jinja template instead of the default query",
     )
+    full_custom_query = Column(
+        Text,
+        nullable=True,
+        comment="Full custom query to calculate metrics. "
+        "If provided, this query will be used instead of the template-based query.",
+    )
 
     metric_tags = Column(JSON, nullable=True, comment="Filter metrics by tags")
     metric_groups = Column(JSON, nullable=True, comment="Filter metrics by groups")
