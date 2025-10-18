@@ -16,10 +16,9 @@ def test_mock_calculation_runner_run_calculations_regular(
 ):
     """Test calculation runner executes regular calculations successfully."""
     mock_calculation_runner.exec._connector.fetch_results.return_value = mock_metric_results
+    obs = mock_observation()
     # Execute
-    result = mock_calculation_runner.run_calculation(
-        obs=mock_observation, purpose=CalculationPurpose.REGULAR
-    )
+    result = mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
 
     assert result.job_id == 1
     assert result.success is True
@@ -27,9 +26,7 @@ def test_mock_calculation_runner_run_calculations_regular(
     assert result.metric_results[0].metric_name == "conversion_rate"
     # get result of job
     executed_job = JobHandler(engine).get(1)
-    rendered_query = mock_calculation_runner.renderer.render(
-        obs=mock_observation, purpose=CalculationPurpose.REGULAR
-    )
+    rendered_query = mock_calculation_runner.renderer.render(obs=obs, purpose=CalculationPurpose.REGULAR)
     mock_calculation_runner.exec._connector.fetch_results.assert_called_once_with(rendered_query)
     assert executed_job.status == JobStatus.COMPLETED
 
@@ -45,9 +42,10 @@ def test_mock_calculation_runner_run_calculations_planning(
 ):
     """Test calculation runner executes planning calculations without storing."""
     mock_calculation_runner.exec._connector.fetch_results.return_value = mock_metric_results
+    obs = mock_observation()
     # Execute
     result = mock_calculation_runner.run_calculation(
-        obs=mock_observation,
+        obs=obs,
         purpose=CalculationPurpose.PLANNING,
     )
     assert isinstance(result.metric_results[0], MetricResult)
@@ -66,7 +64,8 @@ def test_mock_calculation_runner_run_calculations_planning_failed(
 ):
     """Test calculation runner handles database errors properly."""
     mock_calculation_runner.exec._connector.fetch_results.side_effect = Exception("Database error")
-    mock_calculation_runner.run_calculation(obs=mock_observation, purpose=CalculationPurpose.REGULAR)
+    obs = mock_observation()
+    mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
     executed_job = JobHandler(engine).get(1)
     assert executed_job.status == JobStatus.FAILED
     assert "Database error" in executed_job.error_message
@@ -76,10 +75,9 @@ def test_mock_calculation_runner_run_calculations_planning_failed(
 
 def test_calculation_runner_job_creation_failure(mock_calculation_runner, mock_observation):
     """Test that CalculationRunner handles job creation failure."""
+    obs = mock_observation()
     with patch("src.services.runners.executors.JobHandler.create", return_value=None):
-        result = mock_calculation_runner.run_calculation(
-            obs=mock_observation, purpose=CalculationPurpose.REGULAR
-        )
+        result = mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
 
     assert result.success is False
     assert result.job_id is None
@@ -88,10 +86,9 @@ def test_calculation_runner_job_creation_failure(mock_calculation_runner, mock_o
 
 def test_calculation_runner_job_creation_db_exception(mock_calculation_runner, mock_observation):
     """Test that CalculationRunner handles job creation failure due to DB exception."""
+    obs = mock_observation()
     with patch("src.services.runners.executors.JobHandler.create", side_effect=Exception("DB is down")):
-        result = mock_calculation_runner.run_calculation(
-            obs=mock_observation, purpose=CalculationPurpose.REGULAR
-        )
+        result = mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
 
     assert result.success is False
     assert result.job_id is None
@@ -100,10 +97,9 @@ def test_calculation_runner_job_creation_db_exception(mock_calculation_runner, m
 
 def test_calculation_runner_render_failure(mock_calculation_runner, mock_observation, engine, tables):
     """Test that CalculationRunner handles query rendering failure."""
+    obs = mock_observation()
     with patch.object(mock_calculation_runner.renderer, "render", side_effect=Exception("Template error")):
-        result = mock_calculation_runner.run_calculation(
-            obs=mock_observation, purpose=CalculationPurpose.REGULAR
-        )
+        result = mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
 
     assert result.success is False
     assert result.job_id == 1
@@ -119,14 +115,13 @@ def test_calculation_runner_store_metrics_failure(
 ):
     """Test that CalculationRunner handles storing metrics failure."""
     mock_calculation_runner.exec._connector.fetch_results.return_value = mock_metric_results
+    obs = mock_observation()
     with patch.object(
         mock_calculation_runner.jobs,
         "store_metrics",
         side_effect=Exception("DB connection failed"),
     ):
-        result = mock_calculation_runner.run_calculation(
-            obs=mock_observation, purpose=CalculationPurpose.REGULAR
-        )
+        result = mock_calculation_runner.run_calculation(obs=obs, purpose=CalculationPurpose.REGULAR)
 
     assert result.success is False
     assert result.job_id == 1

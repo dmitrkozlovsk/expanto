@@ -82,24 +82,31 @@ def fake_metric_results():
 @pytest.fixture
 def mock_observation():
     """Fixture providing mock observation object for testing."""
-    return Observation(
-        id=1,
-        experiment_id=1,
-        name="Test Observation",
-        db_experiment_name="test_experiment_db_name",
-        split_id="user_id",
-        calculation_scenario="base",
-        exposure_start_datetime=datetime(2024, 1, 1),
-        exposure_end_datetime=datetime(2024, 1, 31),
-        calc_start_datetime=datetime(2024, 1, 1),
-        calc_end_datetime=datetime(2024, 1, 31),
-        exposure_event="view",
-        audience_tables=["active_users"],
-        filters=["platform='web'", "(country='US' or country='CA')"],
-        custom_test_ids_query=None,
-        metric_tags=["main"],
-        metric_groups=["core"],
-    )
+
+    def _mock_observation(**kwargs):
+        default_attrs = {
+            "id": 1,
+            "experiment_id": 1,
+            "name": "Test Observation",
+            "db_experiment_name": "test_experiment_db_name",
+            "split_id": "user_id",
+            "calculation_scenario": "base",
+            "exposure_start_datetime": datetime(2024, 1, 1),
+            "exposure_end_datetime": datetime(2024, 1, 31),
+            "calc_start_datetime": datetime(2024, 1, 1),
+            "calc_end_datetime": datetime(2024, 1, 31),
+            "exposure_event": "view",
+            "audience_tables": ["active_users"],
+            "filters": ["platform='web'", "(country='US' or country='CA')"],
+            "custom_test_ids_query": None,
+            "full_custom_query": None,
+            "metric_tags": ["main"],
+            "metric_groups": ["core"],
+        }
+        default_attrs.update(kwargs)
+        return Observation(**default_attrs)
+
+    return _mock_observation
 
 
 @pytest.fixture
