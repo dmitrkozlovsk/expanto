@@ -215,6 +215,7 @@ class ObservationFormInputs:
                 audience_tables=[],
                 filters=[],
                 custom_test_ids_query=None,
+                full_custom_query=None,
                 metric_tags=[],
                 metric_groups=[],
             )
@@ -347,7 +348,9 @@ class ObservationFormInputs:
                 "Modifying operations (INSERT, UPDATE, DELETE) are not allowed.",
             )
             full_custom_query = st.text_area(
-                "Full Custom Query", value="", key="full_custom_query_input_key"
+                "Full Custom Query",
+                value=predefined.full_custom_query,
+                key="full_custom_query_input_key",
             )
 
             metric_tags: list[str] | None = st.multiselect(
@@ -412,6 +415,15 @@ class ObservationFormInputs:
                 except Exception as e:
                     st.toast(f"Invalid SQL query: {str(e)}", icon="⚠️")
                     st.warning(f"Custom Test IDs Query validation failed: {e}")
+                    return None
+
+            # Validate full custom query separately with SQL query validation
+            if full_custom_query and full_custom_query.strip():
+                try:
+                    ValidationUtils.validate_sql_query(full_custom_query)
+                except Exception as e:
+                    st.toast(f"Invalid SQL query for Full Custom Query: {str(e)}", icon="⚠️")
+                    st.warning(f"Full Custom Query validation failed: {e}")
                     return None
 
             return cls(
