@@ -215,6 +215,7 @@ class ObservationFormInputs:
                 audience_tables=[],
                 filters=[],
                 custom_test_ids_query=None,
+                full_custom_query=None,
                 metric_tags=[],
                 metric_groups=[],
             )
@@ -347,7 +348,9 @@ class ObservationFormInputs:
                 "Modifying operations (INSERT, UPDATE, DELETE) are not allowed.",
             )
             full_custom_query = st.text_area(
-                "Full Custom Query", value="", key="full_custom_query_input_key"
+                "Full Custom Query",
+                value=predefined.full_custom_query,
+                key="full_custom_query_input_key",
             )
 
             metric_tags: list[str] | None = st.multiselect(
