@@ -417,6 +417,15 @@ class ObservationFormInputs:
                     st.warning(f"Custom Test IDs Query validation failed: {e}")
                     return None
 
+            # Validate full custom query separately with SQL query validation
+            if full_custom_query and full_custom_query.strip():
+                try:
+                    ValidationUtils.validate_sql_query(full_custom_query)
+                except Exception as e:
+                    st.toast(f"Invalid SQL query for Full Custom Query: {str(e)}", icon="⚠️")
+                    st.warning(f"Full Custom Query validation failed: {e}")
+                    return None
+
             return cls(
                 observation=ObservationFormData(
                     experiment_id=experiment_id,
