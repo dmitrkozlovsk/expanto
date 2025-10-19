@@ -58,10 +58,10 @@ with st.sidebar.expander('Show app context', expanded=False):
     st.write(f"Page mode: `{app_ctx.page_mode}`")
     st.write(app_ctx.selected)
 
-experiments_page = st.Page("src/ui/experiments/page.py", title="Experiments", url_path="experiments")
-observations_page = st.Page("src/ui/observations/page.py", title="Observations", url_path="observations")
-planner_page = st.Page("src/ui/planner/page.py", title="Planner", url_path="planner")
-results_page = st.Page("src/ui/results/page.py", title="Results", url_path="results")
+experiments_page = st.Page("src/ui/experiments/page.py", title="Experiments", url_path="experiments", icon=":material/science:")
+observations_page = st.Page("src/ui/observations/page.py", title="Observations", url_path="observations", icon=":material/table_chart:")
+planner_page = st.Page("src/ui/planner/page.py", title="Planner", url_path="planner", icon=":material/event:")
+results_page = st.Page("src/ui/results/page.py", title="Results", url_path="results", icon=":material/analytics:")
 
 pg = st.navigation([
     experiments_page,

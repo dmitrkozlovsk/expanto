@@ -2,7 +2,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from pydantic_ai.usage import Usage
+from pydantic_ai.usage import RunUsage
 
 from assistant.core.schemas import Deps, OrchestrationResult, UserData
 from assistant.core.service import AssistantResponse, AssistantService
@@ -17,7 +17,7 @@ def orchestrator_mock():
         spec=OrchestrationResult,
         output="test-response",
         message_history=["msg1", "msg2"],
-        usage=Usage(requests=1, request_tokens=20, response_tokens=10, total_tokens=30),
+        usage=RunUsage(requests=1, input_tokens=20, output_tokens=10),
         thinking="thinking",
     )
     return mock
@@ -59,7 +59,7 @@ async def test_process_request_initializes_memory(
     # response
     assert isinstance(response, AssistantResponse)
     assert response.output == "test-response"
-    assert response.usage.request_tokens == 20
+    assert response.usage.input_tokens == 20
     # memory
     assert test_data.chat_uid in assistant_service.memory
     assert assistant_service.memory[test_data.chat_uid].message_history == ["msg1", "msg2"]
@@ -75,12 +75,14 @@ async def test_process_request_accumulates_usage(
     """Test that usage is accumulated across multiple requests."""
     await assistant_service.process_request(test_data, test_deps)
 
-    orchestrator_mock.process.return_value.usage = Usage(
-        requests=1, request_tokens=20, response_tokens=10, total_tokens=55
+    orchestrator_mock.process.return_value.usage = RunUsage(
+        requests=1, input_tokens=20, output_tokens=10
     )
 
     response = await assistant_service.process_request(test_data, test_deps)
-    assert response.usage.total_tokens == 85
+    assert response.usage.input_tokens == 40
+    assert response.usage.output_tokens == 20
+    assert response.usage.requests == 2
 
 
 @pytest.mark.asyncio
@@ -97,7 +99,7 @@ async def test_process_request_handles_orchestrator_exception(
     chat_history = assistant_service.memory[test_data.chat_uid]
 
     assert chat_history.message_history == []
-    assert chat_history.usage == Usage()
+    assert chat_history.usage == RunUsage()
 
 
 @pytest.mark.asyncio

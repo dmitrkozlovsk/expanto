@@ -10,6 +10,7 @@ from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic_ai.usage import RunUsage
 
 from assistant.core.schemas import AgentsOutput, ExperimentDefinition
 
@@ -28,21 +29,11 @@ class ChatRequest:
 # -------------------- OUTPUT SCHEMAS -------------------- #
 
 
-class TokenUsage(BaseModel):
-    """Model for tracking token usage in chat requests."""
-
-    requests: int | None = None
-    request_tokens: int | None = None
-    response_tokens: int | None = None
-    total_tokens: int | None = None
-    details: dict[str, int] | None = None
-
-
 class AssistResponse(BaseModel):
     """Model for assistant service response."""
 
     output: AgentsOutput
-    usage: TokenUsage
+    usage: RunUsage
     thinking: str | None = None
 
 
@@ -61,7 +52,7 @@ class ChatResponse(BaseModel):
     chat_msg: str | None
     supplement: ExperimentDefinition | None = None
     success: bool
-    usage: TokenUsage | None = None
+    usage: RunUsage | None = None
     error_msg: str | None = None
     thinking: str | None = None
 
@@ -102,7 +93,7 @@ class ChatState:
     future_result: Future[InvokeResult] | None = None
     msg_history: list[ChatMessage] = field(default_factory=list)
     supplements: dict[str, Any] = field(default_factory=dict)
-    usage: TokenUsage | None = None
+    usage: RunUsage | None = None
     chat_uid: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 

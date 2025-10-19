@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 import streamlit.components.v1 as components
+from pydantic_ai.usage import RunUsage
 
 from src.ui.chat.schemas import MessageType, Role
 from src.ui.common import enrich_app_ctx
@@ -17,7 +18,7 @@ from src.ui.state import ChatStateManager
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
-    from src.ui.chat.schemas import ChatMessage, ChatResponse, TokenUsage
+    from src.ui.chat.schemas import ChatMessage, ChatResponse
 
 # -------------------- CONSTANTS -------------------- #
 
@@ -66,15 +67,15 @@ class TokenUsageBadges:
     """Component for displaying token usage badges."""
 
     @staticmethod
-    def render(usage: TokenUsage | None) -> None:
-        """Render token usage badges.
+    def render(usage: RunUsage | None) -> None:
+        """Render token usage information in badges.
 
         Args:
             usage: Token usage information or None.
         """
-        i = usage.request_tokens if usage else 0
-        o = usage.response_tokens if usage else 0
-        t = usage.total_tokens if usage else 0
+        i = usage.input_tokens if usage else 0
+        o = usage.output_tokens if usage else 0
+        t = i + o
 
         html = f"""
         <style>
@@ -126,7 +127,7 @@ class TokenUsageBar:
     """Component for displaying token usage bar with clear chat button."""
 
     @staticmethod
-    def render(usage: TokenUsage | None) -> None:
+    def render(usage: RunUsage | None) -> None:
         """Render token usage bar with clear button.
 
         Args:

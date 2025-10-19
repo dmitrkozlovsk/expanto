@@ -38,7 +38,12 @@ setup: ## Setup project with examples and database
 		fi; \
 	done
 	@echo "Setting up database..."
-	@uv run python -m demo_and_setup.first_experiment
+	@if [ "$(force)" = "true" ]; then \
+		echo "Force option detected. Recreating database."; \
+		uv run python -m demo_and_setup.first_experiment --force; \
+	else \
+		uv run python -m demo_and_setup.first_experiment; \
+	fi
 	@echo "$(GREEN)✅ Setup complete!$(NC)"
 	@echo "Edit .streamlit/secrets.toml with your credentials"
 

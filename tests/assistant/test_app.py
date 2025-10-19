@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic_ai.usage import Usage
+from pydantic_ai.usage import RunUsage
 
 from assistant.app import app
 from assistant.core.schemas import AppContext, UserData
@@ -20,8 +20,8 @@ from assistant.core.service import AssistantResponse
 
 
 @pytest.fixture()
-def dummy_usage() -> Usage:
-    return Usage(requests=1, request_tokens=20, response_tokens=10, total_tokens=30)
+def dummy_usage() -> RunUsage:
+    return RunUsage(requests=1, input_tokens=20, output_tokens=10)
 
 
 # -------------------------------------- Fixtures --------------------------------------
