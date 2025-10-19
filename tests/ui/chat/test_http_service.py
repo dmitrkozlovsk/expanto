@@ -35,13 +35,14 @@ def test_invoke_success_str_output(mock_post, service, chat_request):
     mock_post.return_value = Response(
         status_code=200,
         request=Request("POST", "http://testserver/invoke"),
-        content=b'{"output": "hi", "usage": {"total_tokens": 12}, "thinking": null}',
+        content=b'{"output": "hi", "usage": {"input_tokens": 12, "output_tokens": 13}, "thinking": null}',
     )
     result = service.invoke(chat_request)  # InvokeResult
     print(result)
     assert result.success
     assert result.assistant_response.output == "hi"
-    assert result.assistant_response.usage.total_tokens == 12
+    assert result.assistant_response.usage.input_tokens == 12
+    assert result.assistant_response.usage.output_tokens == 13
 
 
 @patch.object(httpx.Client, "post")

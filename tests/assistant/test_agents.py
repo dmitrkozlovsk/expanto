@@ -67,7 +67,7 @@ async def test_capture_messages(base_agent):
 def test_agent_configuration(base_agent):
     """Verify that Agent correctly forwards config."""
     assert base_agent._system_prompts[0] == "Echo system"
-    assert base_agent._instructions == "Echo whatever the user says"
+    assert base_agent._instructions[0] == "Echo whatever the user says"
     assert isinstance(base_agent.model, TestModel)
     assert base_agent.output_type is str
 

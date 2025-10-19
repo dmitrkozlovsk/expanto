@@ -3,7 +3,8 @@ from unittest.mock import patch
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from src.ui.chat.schemas import ChatResponse, Role, TokenUsage
+from src.ui.chat.schemas import ChatResponse, Role
+from pydantic_ai.usage import RunUsage
 
 
 def app_script():
@@ -19,7 +20,7 @@ def make_success_response():
         chat_msg="Hello",
         supplement=None,
         success=True,
-        usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
+        usage=RunUsage(requests=1, input_tokens=10, output_tokens=10),
         error_msg=None,
         thinking="thinking",
     )
@@ -31,7 +32,7 @@ def make_error_response():
         chat_msg=None,
         supplement=None,
         success=False,
-        usage=TokenUsage(requests=1, request_tokens=10, response_tokens=10, total_tokens=20, details={}),
+        usage=RunUsage(requests=1, input_tokens=10, output_tokens=10),
         error_msg="This is an error message.",
         thinking=None,
     )

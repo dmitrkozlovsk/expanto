@@ -7,10 +7,10 @@ from src.ui.chat.schemas import (
     AppContext,
     AssistResponse,
     ChatState,
-    InvokeResult,
-    TokenUsage,
+    InvokeResult
 )
 from src.ui.chat.services import ChatController, HttpAssistantService
+from pydantic_ai.usage import RunUsage
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def chat_state():
 @pytest.fixture
 def token_usage():
     """Fixture providing TokenUsage instance for testing."""
-    return TokenUsage(requests=1, request_tokens=20, response_tokens=10, total_tokens=30)
+    return RunUsage(requests=1, input_tokens=20, output_tokens=10)
 
 
 @pytest.fixture

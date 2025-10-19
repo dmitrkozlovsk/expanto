@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import chromadb
+from chromadb.config import Settings
 
 from src.logger_setup import logger
 from src.services.metric_register import Metrics
@@ -70,7 +71,7 @@ class VectorDB:
         self.metrics_directory: Path = Path(metrics_directory) if metrics_directory else Path(".")
         self.docs_directory: Path = Path(docs_directory)
         self.root_directory: Path = Path(root_directory)
-        self.chroma_client: ClientAPI = chromadb.Client()
+        self.chroma_client: ClientAPI = chromadb.Client(Settings(anonymized_telemetry=False))
         self.metric_collection: chromadb.Collection | None = None
         self.docs_collection: chromadb.Collection | None = None
         self.code_collection: chromadb.Collection | None = None

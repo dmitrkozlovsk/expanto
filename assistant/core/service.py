@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     pass
 
 from cachetools import TTLCache  # type: ignore[import-untyped]
-from pydantic_ai.usage import Usage
+from pydantic_ai.usage import RunUsage
 
 from assistant.core.agents import AgentOrchestrator
 from assistant.core.schemas import AssistantResponse, ChatHistory, Deps, UserData
@@ -46,7 +46,7 @@ class AssistantService:
         """
 
         if data.chat_uid not in self.memory:
-            self.memory[data.chat_uid] = ChatHistory(message_history=[], usage=Usage())
+            self.memory[data.chat_uid] = ChatHistory(message_history=[], usage=RunUsage())
 
         chat_history = self.memory[data.chat_uid]
 

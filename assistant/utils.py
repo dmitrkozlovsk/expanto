@@ -14,7 +14,7 @@ from pydantic_ai.messages import (
     TextPart,
     ThinkingPart,
 )
-from pydantic_ai.usage import Usage
+from pydantic_ai.usage import RequestUsage
 
 from src.logger_setup import logger
 
@@ -74,10 +74,10 @@ def drop_empty_messages(messages: list[ModelMessage]) -> list[ModelMessage]:
                 cleaned.append(
                     ModelResponse(
                         parts=res_parts,
-                        usage=getattr(msg, "usage", None) or Usage(),
+                        usage=getattr(msg, "usage", None) or RequestUsage(),
                         model_name=getattr(msg, "model_name", None),
                         timestamp=getattr(msg, "timestamp", None) or datetime.now(),
-                        vendor_id=getattr(msg, "vendor_id", None),
+                        provider_response_id=getattr(msg, "provider_response_id", None),
                     )
                 )
 

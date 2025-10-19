@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-from pydantic_ai.usage import Usage
+from pydantic_ai.usage import RunUsage
 
 from assistant.vdb import VectorDB
 
@@ -98,7 +98,7 @@ class OrchestrationResult:
 
     output: AgentsOutput
     message_history: list[Any]
-    usage: Usage
+    usage: RunUsage
     thinking: str | None
 
 
@@ -110,7 +110,7 @@ class AssistantResponse:
     """
 
     output: AgentsOutput
-    usage: Usage
+    usage: RunUsage
     thinking: str | None
 
 
@@ -123,4 +123,4 @@ class ChatHistory:
     """
 
     message_history: list[Any]
-    usage: Usage
+    usage: RunUsage
