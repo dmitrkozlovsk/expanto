@@ -19,3 +19,4 @@ alembic*
 .log
 .parquet
 .mypy_cache/
+.cursor
