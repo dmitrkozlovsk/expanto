@@ -1,5 +1,6 @@
 from nicegui import ui
 from src.nicegui_ui.layout.shell import create_shell
+from src.nicegui_ui.pages.power_analysis import render_power_analysis_page
 
 async def home_page():
     ui.label('Home')
@@ -31,11 +32,12 @@ async def main():
         '/': home_page,
         '/home': home_page,
         '/experiments': experiments_page,
-        '/planner': planner_page,
+        '/planner': render_power_analysis_page,
         '/data': data_page,
         '/jobs': jobs_page,
         '/documents': documents_page,
         '/settings': settings_page,
-})
+    }).classes('full-width', remove='')
+
 
 ui.run()
