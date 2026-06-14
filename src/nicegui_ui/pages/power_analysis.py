@@ -165,7 +165,7 @@ def render_advanced_settings():
         with ui.dialog().props('backdrop-filter="blur(8px) brightness(40%)"') as dialog:
             card = ui.card().props('bordered').classes('w-full rounded q-pa-none', remove='nicegui-card')
             with card:
-                ui.codemirror(language='SQL', theme='solarizedLight').classes('q-px-none')
+                ui.codemirror(language='SQL').classes('q-px-none')
 
         dialog.on('escape-key', lambda: ui.notify('ESC pressed'))
         dialog.open()
@@ -186,14 +186,15 @@ def render_advanced_settings():
     )
 
 
-def render_power_analysis_page():
+def render_power_analysis_page(request):
     row = ui.row().classes(add='full-width no-wrap justify-center q-px-none q-px-md ', remove='nicegui-row')
     with row:
         left_card = (
             ui.column()
             .props('bordered')
             .classes(
-            add='h-[calc(100vh-35px)] min-w-54 col-3 bg-surface q-pa-md q-gutter-y-md justify-start overflow-y-auto border-r-[1px] border-[#e8e8e8]',
+            add='h-[calc(100vh-35px)] min-w-54 col-3 bg-surface q-pa-md q-gutter-y-md justify-start '
+                'overflow-y-auto border-r-[1px] border-[#e8e8e8]',
             remove='nicegui-column')
         )
         with left_card:
@@ -208,7 +209,7 @@ def render_power_analysis_page():
         right_card = ui.card().classes('col-9 shadow-1 q-ma-md rounded-md', remove='nicegui-card')\
             .style('height: fit-content;')
         with right_card:
-            echart = ui.echart(
+            ui.echart(
             {
                 'grid': {'left': 16, 'top': 16, 'right': 16, 'bottom': 16, 'containLabel': False},
                 'yAxis': {'type': 'value',
@@ -220,8 +221,8 @@ def render_power_analysis_page():
                 'xAxis': {'type': 'category', 'data': ['A', 'B'], 'inverse': True},
                 'legend': {'textStyle': {'color': 'gray'}},
                 'series': [
-                    {'type': 'bar', 'name': 'Alpha', 'data': [0.1, 0.2]},
-                    {'type': 'bar', 'name': 'Beta', 'data': [0.3, 0.4]},
+                    {'type': 'bar', 'name': 'Alpha', 'data': [5, 10]},
+                    {'type': 'bar', 'name': 'Beta', 'data': [20, 50]},
                 ],
             }
             ).classes('h-100 q-pa-sm')
