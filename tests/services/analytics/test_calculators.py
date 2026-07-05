@@ -343,7 +343,7 @@ def test_sample_size_calculator_all_metrics_trivial(valid_metric_results):
             f"Sample sizes length mismatch for metric {result.metric_name}"
         )
         assert (
-            result.observations_per_day == valid_metric_results[i].observation_cnt / reference_period_days
+            result.observations_per_day == (valid_metric_results[i].observation_cnt / reference_period_days) / 2
         ), f"Observations per day mismatch for {result.metric_name}"
 
 

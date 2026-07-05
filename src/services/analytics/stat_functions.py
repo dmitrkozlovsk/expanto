@@ -33,6 +33,7 @@ SRMResult = namedtuple(
     "SRMResult", ["statistic", "p_value", "df", "expected", "observed", "allocation", "is_srm"]
 )
 
+EPS = 1e-9
 
 def ttest_welch(
     mean_1: float | np.ndarray,
@@ -189,15 +190,15 @@ def ratio_metric_sample_variance(
     Args:
         mean_n: Mean of the numerator.
         var_n: Variance of the numerator. Must be non-negative.
-        mean_d: Mean of the denominator. Cannot be zero.
+        mean_d: Mean of the denominator. Can be zero.
         var_d: Variance of the denominator. Must be non-negative.
         cov: Covariance between the numerator and denominator.
 
     Returns:
-        The estimated variance of the ratio metric.
+        The estimated variance of the ratio metric. Returns 0 if mean_d is zero.
 
     Raises:
-        ValueError: If any variance is negative or if mean_d is zero.
+        ValueError: If any variance is negative.
         TypeError: If arguments are not of the same type (all float or all
             np.ndarray).
         ValueError: If np.ndarray arguments have different shapes.
@@ -222,7 +223,17 @@ def ratio_metric_sample_variance(
     np.divide(2 * mean_n * cov, mean_d**3, out=term3, where=mean_ne_zero_mask)
 
     res_var_raw = term1 + term2 - term3
-    res_var = np.where((res_var_raw > -1e-9) & (res_var_raw < 0), 0, res_var_raw)
+    
+    # Mathematically, res_var_raw is Var(X - (E[X]/E[Y])Y) / E[Y]^2, which is always >= 0.
+    # Any negative value is due to floating point precision. We use a relative tolerance.
+    max_term = np.maximum(np.maximum(np.abs(term1), np.abs(term2)), np.abs(term3))
+    tolerance = 1e-9 * max_term + EPS
+    
+    res_var = np.where((res_var_raw >= -tolerance) & (res_var_raw < 0), 0.0, res_var_raw)
+    res_var = np.where(mean_ne_zero_mask, res_var, 0.0)
+
+    if not isinstance(mean_n, np.ndarray) and isinstance(res_var, np.ndarray):
+        return float(res_var)
     return res_var
 
 
@@ -269,15 +280,13 @@ def ratio_metric_test(
     diff_se = np.sqrt(diff_var)
 
     # avoiding division by zero
-    eps = 1e-12
-    is_se_zero = np.isclose(diff_se, 0.0, atol=eps)
-    is_diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
+    is_se_zero = np.isclose(diff_se, 0.0, atol=EPS)
+    is_diff_zero = np.isclose(diff_metric, 0.0, atol=EPS)
 
     z_stat = np.divide(diff_metric, diff_se, out=np.zeros_like(diff_metric, dtype=float), where=~is_se_zero)
     need_inf = is_se_zero & ~is_diff_zero
     if np.any(need_inf):
-        inf_val = np.sign(diff_metric) * np.inf
-        z_stat = np.where(need_inf, inf_val, z_stat)
+        z_stat = np.where(need_inf, np.where(diff_metric > 0, np.inf, -np.inf), z_stat)
 
     p_value = 2 * (1 - norm.cdf(abs(z_stat)))
 
@@ -287,8 +296,8 @@ def ratio_metric_test(
 
     diff_ratio = np.empty_like(diff_metric, dtype=float)
 
-    m1_zero = np.isclose(metric_value_1, 0.0, atol=eps)
-    diff_zero = np.isclose(diff_metric, 0.0, atol=eps)
+    m1_zero = np.isclose(metric_value_1, 0.0, atol=EPS)
+    diff_zero = np.isclose(diff_metric, 0.0, atol=EPS)
 
     np.divide(diff_metric, metric_value_1, out=diff_ratio, where=~m1_zero)
 
@@ -298,8 +307,7 @@ def ratio_metric_test(
     # zero baseline and non-zero difference -> ±inf (without inf*0, because mask excludes diff==0)
     mask_inf = m1_zero & ~diff_zero
     if np.any(mask_inf):
-        inf_val = np.sign(diff_metric) * np.inf
-        diff_ratio = np.where(mask_inf, inf_val, diff_ratio)
+        diff_ratio = np.where(mask_inf, np.where(diff_metric > 0, np.inf, -np.inf), diff_ratio)
 
     return TestResult(
         statistic=z_stat,
@@ -356,8 +364,7 @@ def delta_test_ratio_metric(
         - diff_ratio: The relative difference between metrics.
 
     Raises:
-        ValueError: If variances are negative, sample sizes are not positive,
-            or denominator means are zero.
+        ValueError: If variances are negative or sample sizes are not positive.
         TypeError: If arguments are not of the same type.
         ValueError: If np.ndarray arguments have different shapes.
     """

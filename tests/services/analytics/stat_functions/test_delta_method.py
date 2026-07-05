@@ -174,8 +174,32 @@ def test_ratio_metric_mean_d_zero_no_warnings(recwarn):
         var_d=np.array([5]),
         cov=np.array([2]),
     )
-    assert np.isnan(var)
+    assert var == 0
     assert len(recwarn) == 0
+
+
+def test_delta_test_ratio_metric_mean_d_zero_no_warnings(recwarn):
+    """
+    Test that delta_test_ratio_metric handles mean_d = 0 safely.
+    """
+    test_result = delta_test_ratio_metric(
+        metric_1=np.array([0]),
+        mean_n_1=np.array([50]),
+        var_n_1=np.array([10]),
+        mean_d_1=np.array([0]),
+        var_d_1=np.array([5]),
+        cov_1=np.array([2]),
+        n_1=np.array([100]),
+        metric_2=np.array([0]),
+        mean_n_2=np.array([50]),
+        var_n_2=np.array([10]),
+        mean_d_2=np.array([0]),
+        var_d_2=np.array([5]),
+        cov_2=np.array([2]),
+        n_2=np.array([100]),
+    )
+    assert len(recwarn) == 0
+    assert test_result.p_value == 1.0
 
 
 def test_ratio_metric_test_zero_variances_no_warnings(recwarn):
