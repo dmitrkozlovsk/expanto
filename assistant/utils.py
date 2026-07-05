@@ -11,8 +11,10 @@ from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
     ModelResponsePart,
+    SystemPromptPart,
     TextPart,
     ThinkingPart,
+    UserPromptPart,
 )
 from pydantic_ai.usage import RequestUsage
 
@@ -59,7 +61,7 @@ def drop_empty_messages(messages: list[ModelMessage]) -> list[ModelMessage]:
             req_parts = [
                 p
                 for p in msg.parts
-                if getattr(p, "has_content", False) or bool(getattr(p, "content", None))
+                if isinstance(p, UserPromptPart | SystemPromptPart) and bool(getattr(p, "content", None))
             ]
             if req_parts:
                 cleaned.append(ModelRequest(parts=req_parts))

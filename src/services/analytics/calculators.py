@@ -407,7 +407,9 @@ class SampleSizeCalculator:
             else:
                 raise ValueError(f"Unsupported metric type: {metric_result.metric_type}")
 
-            observations_per_day = metric_result.observation_cnt / reference_period_days
+            observations_per_day = (
+                metric_result.observation_cnt / reference_period_days
+            ) / 2  # Assuming 2 groups (A/B)
 
             sample_size_results.append(
                 SampleSizeCalculation(

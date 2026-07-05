@@ -20,7 +20,7 @@ INVALID_SQL_KEYWORDS = [
     "DELETE",
     "CREATE",
     "MERGE",
-    "UPDATE",
+    # "UPDATE", # Allow UPDATE in strings
     "JOIN",
     "WHERE",
     "GROUP",
@@ -125,7 +125,7 @@ class UserAggregationFormula(BaseModel):
             )
 
         # check invalid keywords
-        statement_pattern = r"\b(?:" + "|".join(INVALID_SQL_KEYWORDS) + r")\b"
+        statement_pattern = r"\b(" + "|".join(INVALID_SQL_KEYWORDS) + r")\b"
         if re.search(statement_pattern, value, re.IGNORECASE):
             raise ValueError(
                 f"<{value}> SQL expression has invalid keywords {', '.join(INVALID_SQL_KEYWORDS)}."
