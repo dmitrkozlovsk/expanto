@@ -21,3 +21,4 @@ alembic*
 .mypy_cache/
 .zed
 .cursor
+.agents
