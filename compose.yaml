@@ -1,0 +1,21 @@
+name: expanto
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.24
+    environment:
+      POSTGRES_DB: expanto_dev
+      POSTGRES_USER: expanto
+      POSTGRES_PASSWORD: expanto
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - expanto_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U expanto -d expanto_dev"]
+      interval: 2s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  expanto_postgres_data:

@@ -1,18 +1,22 @@
 [project]
 name = "expanto"
-version = "0.1.0a1"
+version = "0.2.0"
 description = "Experimenter Analytics Tools"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
+    #UI
+    "nicegui>=3.2.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.52",
+    "psycopg[binary]>=3.3.5",
     # Core
     "pydantic>=2.10.6",
     "pydantic-settings>=2.4.0",
     "streamlit==1.49.1",
-    "sqlalchemy[asyncio]>=2.0.38",
     "aiosqlite>=0.21.0",
     "jinja2>=3.1.4",
-    # Data
+    # DS
     "scipy>=1.15.1",
     "statsmodels>=0.14.4",
     "plotly>=6.0.1",
@@ -21,7 +25,7 @@ dependencies = [
     "snowflake-connector-python>=3.13.2",
     "google-cloud-bigquery[bqstorage,pandas]>=3.31.0",
     "db-dtypes>=1.4.2",
-    "pyarrow<19",
+    "pyarrow>=19",
     # LLM
     "pydantic-ai~=1.1.0",
     "pydantic-ai-slim[duckduckgo,tavily]~=1.1.0",
@@ -30,16 +34,21 @@ dependencies = [
     # Utilities
     "pyyaml>=6.0.2",
     "logfire[fastapi,httpx,requests,sqlalchemy]>=4.3.3",
-    "nicegui>=3.2.0",
 ]
 
 [dependency-groups]
 dev = [
     "mypy>=1.14.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.9.3",
-    "pytest>=8.3.4",
-    "pytest-asyncio>=1.0.0",
+    "testcontainers[postgres]>=4.15.0",
+    "ty>=0.0.78",
 ]
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 108
